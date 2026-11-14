@@ -1,0 +1,3672 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Neon Vanguard</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    :root {
+      --bg-1: #172746;
+      --bg-2: #060b15;
+      --panel: #08111df5;
+      --panel-soft: #ffffff08;
+      --line: #ffffff24;
+      --cyan: #62eaff;
+      --mint: #73ffc2;
+      --gold: #ffd166;
+      --pink: #ff7189;
+      --danger: #ff315e;
+      --purple: #c7a8ff;
+    }
+
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: radial-gradient(ellipse at center, var(--bg-1), var(--bg-2) 70%);
+      color: #eef7ff;
+      font-family: system-ui, Arial, sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: grid;
+      place-items: center;
+      padding: 12px;
+    }
+
+    .game {
+      position: relative;
+      width: min(960px, 100%);
+      aspect-ratio: 8 / 5;
+      overflow: hidden;
+      border: 1px solid #28465c;
+      border-radius: 16px;
+      background: #070c18;
+      box-shadow: 0 25px 80px #0009;
+    }
+
+    #canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      cursor: crosshair;
+      touch-action: none;
+      user-select: none;
+    }
+
+    #minimap {
+      position: absolute;
+      z-index: 5;
+      top: 58px;
+      left: 12px;
+      width: 112px;
+      height: 70px;
+      border: 1px solid #9bd7ff88;
+      border-radius: 8px;
+      background: #050b16dd;
+      pointer-events: none;
+    }
+
+    .hud {
+      position: absolute;
+      inset: 12px 12px auto;
+      z-index: 6;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      pointer-events: none;
+    }
+
+    .hud-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .badge {
+      padding: 8px 11px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #07101ddd;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .badge strong { color: var(--cyan); }
+
+    .fullscreen-button {
+      padding: 7px 10px;
+      border: 1px solid #ffffff44;
+      border-radius: 10px;
+      background: #07101ddd;
+      color: #eef7ff;
+      pointer-events: auto;
+      font-size: 12px;
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    .health-box {
+      position: absolute;
+      left: 14px;
+      bottom: 14px;
+      z-index: 6;
+      width: 190px;
+      height: 13px;
+      padding: 2px;
+      border: 1px solid #ffffff55;
+      border-radius: 99px;
+      background: #07101ddd;
+    }
+
+    .health-fill {
+      width: 100%;
+      height: 100%;
+      border-radius: inherit;
+      background: #65f0a8;
+      transition: width .15s, background-color .15s;
+    }
+
+    .boss-health-box {
+      position: absolute;
+      left: 14px;
+      bottom: 40px;
+      z-index: 6;
+      width: min(320px, 60%);
+      padding: 6px 8px;
+      border: 1px solid #ff557988;
+      border-radius: 9px;
+      background: #07101ddd;
+      pointer-events: none;
+    }
+
+    .boss-health-label {
+      margin-bottom: 4px;
+      color: #ff9aa9;
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    .boss-health-track {
+      height: 11px;
+      overflow: hidden;
+      border-radius: 99px;
+      background: #000b;
+    }
+
+    .boss-health-fill {
+      width: 100%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #ff315e, #ff8a75);
+      transition: width .15s;
+    }
+
+    #criticalFlash {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    .game.critical-health #criticalFlash {
+      animation: critical-pulse .48s steps(2, end) infinite;
+    }
+
+    @keyframes critical-pulse {
+      0%, 100% { background: rgba(255, 16, 34, .12); }
+      50% { background: rgba(255, 16, 34, .38); }
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 20;
+      display: grid;
+      place-items: center;
+      padding: 14px;
+      overflow-y: auto;
+      background: #020711bd;
+      backdrop-filter: blur(6px);
+    }
+
+    .overlay.hidden { display: none; }
+
+    .panel {
+      width: min(650px, 100%);
+      max-height: 100%;
+      overflow-y: auto;
+      padding: 22px;
+      border: 1px solid #9bd7ff3d;
+      border-radius: 18px;
+      background: var(--panel);
+      text-align: center;
+      box-shadow: 0 20px 60px #0008;
+    }
+
+    .eyebrow {
+      color: var(--mint);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .22em;
+      text-transform: uppercase;
+    }
+
+    h1 { margin: 7px 0; font-size: clamp(28px, 6vw, 44px); }
+    p { color: #bfccdc; line-height: 1.5; }
+
+    .tabs {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 12px 0;
+    }
+
+    button {
+      padding: 10px 18px;
+      border: 0;
+      border-radius: 99px;
+      background: linear-gradient(110deg, var(--cyan), var(--mint));
+      color: #06121a;
+      font: inherit;
+      font-weight: 900;
+      letter-spacing: .04em;
+      cursor: pointer;
+    }
+
+    button:hover { filter: brightness(1.1); transform: translateY(-1px); }
+    button:disabled { cursor: not-allowed; opacity: .45; transform: none; }
+
+    .tab-button {
+      padding: 8px 13px;
+      border: 1px solid #ffffff25;
+      background: #ffffff0a;
+      color: #dceaf7;
+      font-size: 12px;
+    }
+
+    .tab-button.active {
+      background: linear-gradient(110deg, var(--cyan), var(--mint));
+      color: #06121a;
+    }
+
+    .wallet {
+      margin: 12px auto;
+      padding: 9px 14px;
+      width: fit-content;
+      border: 1px solid #ffd16655;
+      border-radius: 99px;
+      color: var(--gold);
+      background: #ffd16612;
+      font-weight: 800;
+    }
+
+    .shop {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 9px;
+      margin-top: 15px;
+    }
+
+    .upgrade {
+      padding: 12px 9px;
+      border: 1px solid #ffffff20;
+      border-radius: 12px;
+      background: var(--panel-soft);
+    }
+
+    .upgrade h3 { margin: 0 0 5px; color: #dff7ff; font-size: 14px; }
+    .upgrade p { min-height: 34px; margin: 4px 0; font-size: 11px; }
+    .upgrade .level { color: var(--mint); font-size: 11px; }
+    .upgrade button { width: 100%; margin-top: 8px; padding: 8px 5px; font-size: 11px; }
+
+    .shop-heading {
+      margin: 18px 0 6px;
+      color: #dff7ff;
+      font-size: 18px;
+    }
+
+    .ship-shop,
+    .catalog-grid,
+    .achievement-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(120px, 1fr));
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .ship-card,
+    .catalog-card,
+    .achievement-card {
+      padding: 10px 7px;
+      border: 1px solid #ffffff24;
+      border-radius: 12px;
+      background: var(--panel-soft);
+    }
+
+    .ship-card.selected { border-color: var(--mint); box-shadow: 0 0 12px #73ffc233; }
+
+    .ship-preview {
+      height: 48px;
+      margin-bottom: 6px;
+      display: grid;
+      place-items: center;
+    }
+
+    .ship-preview svg { display: block; width: 64px; height: 48px; }
+
+    .ship-card h3, .catalog-card h3, .achievement-card h3 {
+      margin: 4px 0;
+      color: #dff7ff;
+      font-size: 12px;
+    }
+
+    .ship-card p, .catalog-card p, .achievement-card p {
+      min-height: 34px;
+      margin: 4px 0 8px;
+      font-size: 10px;
+      line-height: 1.4;
+    }
+
+    .ship-card button { width: 100%; padding: 7px 4px; font-size: 10px; }
+
+    .color-picker-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin: 12px auto;
+      padding: 9px 14px;
+      width: fit-content;
+      border: 1px solid #62eaff55;
+      border-radius: 12px;
+      background: #ffffff08;
+      color: #dff7ff;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .color-picker-row input {
+      width: 42px;
+      height: 32px;
+      padding: 2px;
+      border: 1px solid #ffffff55;
+      border-radius: 7px;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .daily-missions {
+      display: grid;
+      gap: 8px;
+      margin-top: 10px;
+      text-align: left;
+    }
+
+    .mission-card {
+      padding: 11px;
+      border: 1px solid #ffffff24;
+      border-radius: 12px;
+      background: var(--panel-soft);
+    }
+
+    .mission-card h3 { margin: 0 0 4px; color: #dff7ff; font-size: 13px; }
+    .mission-card p { margin: 4px 0 8px; font-size: 11px; }
+
+    .mission-progress {
+      height: 7px;
+      overflow: hidden;
+      border-radius: 99px;
+      background: #0008;
+    }
+
+    .mission-progress-fill {
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--cyan), var(--mint));
+    }
+
+    .mission-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 8px;
+      color: #bfccdc;
+      font-size: 11px;
+    }
+
+    .mission-footer button { padding: 7px 10px; font-size: 10px; }
+
+    .catalog-card {
+      display: grid;
+      grid-template-columns: 44px 1fr;
+      align-items: center;
+      gap: 8px;
+      text-align: left;
+    }
+
+    .catalog-card h3 { font-size: 12px; }
+    .catalog-card p { min-height: auto; margin: 3px 0; }
+
+    .catalog-icon {
+      display: grid;
+      place-items: center;
+      width: 40px;
+      height: 40px;
+      border: 1px solid #ffffff2a;
+      border-radius: 50%;
+      color: var(--power-color, var(--cyan));
+      font-size: 24px;
+      text-shadow: 0 0 12px currentColor;
+      animation: icon-spin 2.4s linear infinite;
+    }
+
+    .catalog-icon.unknown {
+      color: #9aa8bb;
+      animation-duration: 3.5s;
+    }
+
+    .achievement-section {
+      margin-top: 14px;
+      padding-top: 10px;
+      border-top: 1px solid #ffffff1a;
+      text-align: left;
+    }
+
+    .achievement-section h3 {
+      margin: 0 0 10px;
+      color: #dff7ff;
+      font-size: 15px;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+
+    .achievement-card {
+      min-height: 120px;
+      border: 1px solid rgba(255,255,255,0.16);
+      background: rgba(255,255,255,0.04);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .achievement-card.locked {
+      opacity: 0.5;
+      filter: grayscale(.2);
+    }
+
+    .achievement-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .achievement-rarity {
+      display: inline-block;
+      padding: 3px 7px;
+      border-radius: 999px;
+      font-size: 9px;
+      font-weight: 900;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: #06121a;
+    }
+
+    .achievement-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      font-size: 16px;
+      font-weight: 800;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+    }
+
+    .achievement-card p {
+      min-height: 32px;
+      margin: 6px 0;
+      font-size: 10px;
+      line-height: 1.35;
+    }
+
+    .achievement-progress-bar {
+      height: 8px;
+      background: rgba(0,0,0,0.35);
+      border-radius: 99px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+
+    .achievement-progress-fill {
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--cyan), var(--mint));
+    }
+
+    .achievement-meta {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 8px;
+      color: #dfeaf7;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: .04em;
+    }
+
+    .controls {
+      margin-top: 14px;
+      padding: 10px;
+      border-radius: 10px;
+      background: #ffffff0a;
+      color: #d3deeb;
+      font-size: 11px;
+      line-height: 1.8;
+    }
+
+    .main-button {
+      margin-top: 16px;
+      min-width: 180px;
+      padding: 12px 24px;
+    }
+
+    .home-actions,
+    .progress-actions {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .danger-button { background: linear-gradient(110deg, #ff7189, #ffad67); }
+
+    .save-status {
+      min-height: 1.5em;
+      margin-top: 10px;
+      color: #dff7ff;
+      font-size: 12px;
+    }
+
+    [hidden] { display: none !important; }
+    .mobile-controls { display: none; }
+
+    .game:fullscreen {
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+      max-width: none;
+      aspect-ratio: auto;
+      border: 0;
+      border-radius: 0;
+    }
+
+    .game:fullscreen #canvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    .layout-zone {
+      position: absolute;
+      z-index: 10;
+      display: none;
+      border: 2px dashed rgba(255, 113, 137, 0.9);
+      background: rgba(255, 49, 94, 0.15);
+      pointer-events: none;
+    }
+
+    #layoutTopZone {
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 46px;
+    }
+
+    #layoutBottomZone {
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 78px;
+    }
+
+    .layout-toolbar {
+      position: absolute;
+      z-index: 12;
+      top: 48px;
+      left: 50%;
+      display: none;
+      align-items: center;
+      gap: 6px;
+      padding: 6px;
+      border: 1px solid #ffffff44;
+      border-radius: 12px;
+      background: #07101df2;
+      transform: translateX(-50%);
+    }
+
+    .layout-toolbar button {
+      min-width: 34px;
+      padding: 6px 9px;
+      font-size: 11px;
+    }
+
+    #selectedLayoutLabel {
+      padding: 0 5px;
+      color: #eef7ff;
+      font-size: 11px;
+      white-space: nowrap;
+    }
+
+    .game.layout-editing .layout-zone,
+    .game.layout-editing .layout-toolbar {
+      display: flex;
+    }
+
+    .game.layout-editing [data-layout-item] {
+      outline: 2px solid var(--mint);
+      cursor: grab;
+      pointer-events: auto;
+      touch-action: none;
+    }
+
+    .game.layout-editing [data-layout-item].layout-selected {
+      outline: 3px solid #ffd166;
+      box-shadow: 0 0 16px #ffd16699;
+    }
+
+    .game.layout-editing #minimap {
+      pointer-events: auto;
+    }
+
+    .mobile-controls {
+      position: absolute;
+      inset: 0;
+      display: none;
+      pointer-events: none;
+    }
+
+    .move-pad,
+    .mobile-button {
+      position: absolute;
+      pointer-events: auto;
+    }
+
+    .move-pad {
+      left: 14px;
+      bottom: 88px;
+      width: 112px;
+      height: 112px;
+      border: 1px solid #ffffff55;
+      border-radius: 50%;
+      background: #07101d99;
+      touch-action: none;
+    }
+
+    .move-stick {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 46px;
+      height: 46px;
+      border: 1px solid #b9f4ff;
+      border-radius: 50%;
+      background: #62eaff88;
+      transform: translate(-50%, -50%);
+    }
+
+    #fireButton {
+      left: auto;
+      right: 92px;
+      bottom: 96px;
+      width: 68px;
+      height: 68px;
+      padding: 6px;
+      border: 1px solid #62eaffaa;
+      background: #07101ddd;
+      color: #eef7ff;
+      font-size: 10px;
+      touch-action: none;
+      user-select: none;
+    }
+
+    #dashButton {
+      left: auto;
+      right: 14px;
+      bottom: 102px;
+      width: 56px;
+      height: 56px;
+      padding: 6px;
+      border: 1px solid #73ffc2aa;
+      background: #07101ddd;
+      color: #eef7ff;
+      font-size: 10px;
+      touch-action: none;
+      user-select: none;
+    }
+
+    .game.layout-editing .mobile-controls {
+      display: block !important;
+    }
+
+    @media (max-width: 600px) {
+      body { padding: 4px; }
+      .game { border-radius: 9px; }
+      .hud { inset: 6px 6px auto; gap: 4px; }
+      .hud-group { gap: 4px; }
+      .badge { padding: 6px; font-size: 9px; }
+      .health-box { left: 7px; top: 54px; bottom: auto; width: 120px; }
+      .boss-health-box { left: 7px; bottom: 32px; width: min(230px, 65%); }
+      .panel { padding: 15px; }
+      .shop { gap: 5px; }
+      .upgrade { padding: 9px 5px; }
+      .upgrade h3 { font-size: 12px; }
+      .upgrade p { font-size: 10px; }
+      .ship-shop, .catalog-grid, .achievement-grid { grid-template-columns: repeat(2, minmax(110px, 1fr)); }
+      #minimap { top: 52px; left: 6px; width: 90px; height: 56px; }
+    }
+
+    @media (pointer: coarse), (max-width: 760px) {
+      .mobile-controls {
+        display: block;
+      }
+    }
+
+    @media (max-width: 760px) and (orientation: portrait) {
+      body { display: block; padding: 0; }
+      .game {
+        width: 100vw;
+        height: 100vh;
+        height: 100dvh;
+        max-width: none;
+        aspect-ratio: auto;
+        border: 0;
+        border-radius: 0;
+      }
+    }
+
+    @media (max-width: 900px) and (orientation: landscape) {
+      body { padding: 4px; }
+      .game {
+        width: min(100vw, calc(100dvh * 1.6));
+        height: min(100dvh, calc(100vw / 1.6));
+        aspect-ratio: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="game">
+    <canvas id="canvas" width="960" height="600"></canvas>
+
+    <canvas id="minimap" width="180" height="112" data-layout-item="minimap" aria-label="Minimapa"></canvas>
+
+    <div id="criticalFlash" aria-hidden="true"></div>
+
+    <div class="boss-health-box" id="bossHealthBox" hidden>
+      <div class="boss-health-label">Boss final</div>
+      <div class="boss-health-track">
+        <div class="boss-health-fill" id="bossHealth"></div>
+      </div>
+    </div>
+
+    <div class="hud">
+      <div class="hud-group">
+        <div class="badge">Pontos <strong id="score">0</strong></div>
+        <div class="badge">Recorde <strong id="bestScore">0</strong></div>
+        <div class="badge">Onda <strong id="wave">1</strong></div>
+      </div>
+
+      <div class="hud-group">
+        <div class="badge">💰 <strong id="moneyHud">0</strong></div>
+        <div class="badge">Dash <strong id="dashHud">PRONTO</strong></div>
+        <button class="fullscreen-button" id="fullscreenButton" type="button" aria-label="Tela cheia">⛶</button>
+      </div>
+    </div>
+
+    <div class="health-box"><div class="health-fill" id="health"></div></div>
+
+    <div class="layout-zone" id="layoutTopZone"></div>
+    <div class="layout-zone" id="layoutBottomZone"></div>
+
+    <div class="layout-toolbar" id="layoutToolbar">
+      <span id="selectedLayoutLabel">Selecione um controle</span>
+      <button id="shrinkLayoutItem" type="button" aria-label="Diminuir tamanho">−</button>
+      <button id="growLayoutItem" type="button" aria-label="Aumentar tamanho">+</button>
+      <button id="finishLayout" type="button">Concluir</button>
+    </div>
+
+    <div class="mobile-controls" id="mobileControls" aria-label="Controles móveis">
+      <div class="move-pad" id="movePad" data-layout-item="movePad" aria-label="Mover nave">
+        <div class="move-stick" id="moveStick"></div>
+      </div>
+
+      <button
+        class="mobile-button mobile-fire"
+        id="fireButton"
+        data-layout-item="fireButton"
+        type="button"
+        aria-label="Atirar"
+      >ATIRAR</button>
+
+      <button
+        class="mobile-button mobile-dash"
+        id="dashButton"
+        data-layout-item="dashButton"
+        type="button"
+        aria-label="Dash"
+      >DASH</button>
+    </div>
+
+    <section class="overlay" id="overlay">
+      <div class="panel">
+        <div class="eyebrow">Neon Vanguard</div>
+
+        <nav class="tabs" aria-label="Menu">
+          <button class="tab-button active" data-tab="home" type="button">Jogo</button>
+          <button class="tab-button" data-tab="shop" type="button">Loja</button>
+          <button class="tab-button" data-tab="custom" type="button">Personalização</button>
+          <button class="tab-button" data-tab="missions" type="button">Missões</button>
+          <button class="tab-button" data-tab="catalog" type="button">Catálogo</button>
+          <button class="tab-button" data-tab="achievements" type="button">Conquistas</button>
+          <button class="tab-button" data-tab="layout" type="button">Controles</button>
+          <button class="tab-button" data-tab="progress" type="button">Progresso</button>
+        </nav>
+
+        <section id="homeTab">
+          <h1 id="title">Sua nave aguarda</h1>
+          <p id="message">Melhore sua nave na loja e sobreviva às ondas.</p>
+
+          <div class="controls">
+            Mover: <b>WASD</b> ou <b>setas</b><br>
+            Mirar: <b>mouse</b> · Atirar: <b>clique</b> ou <b>espaço</b><br>
+            Dash: <b>Shift</b> · Pausar: <b>Esc</b><br>
+            Loja: <b>L</b> · Mobile: <b>joystick + botões</b>
+          </div>
+
+          <div class="home-actions">
+            <button class="main-button" id="startButton">Começar partida</button>
+          </div>
+        </section>
+
+        <section id="shopTab" hidden>
+          <div class="wallet">Dinheiro: 💰 <span id="wallet">0</span></div>
+
+          <div class="shop">
+            <div class="upgrade">
+              <h3>🚀 Velocidade</h3>
+              <p>Move e desliza mais rápido.</p>
+              <div class="level" id="speedLevel"></div>
+              <button id="buySpeed">Comprar</button>
+            </div>
+
+            <div class="upgrade">
+              <h3>⚡ Cadência</h3>
+              <p>Atira mais rápido. Cada bala causa 1 de dano.</p>
+              <div class="level" id="damageLevel"></div>
+              <button id="buyDamage">Comprar</button>
+            </div>
+
+            <div class="upgrade">
+              <h3>❤️ Vida</h3>
+              <p>Aumenta a vida máxima da nave.</p>
+              <div class="level" id="healthLevel"></div>
+              <button id="buyHealth">Comprar</button>
+            </div>
+          </div>
+
+          <button class="main-button" id="backToHomeButton">Voltar</button>
+        </section>
+
+        <section id="customTab" hidden>
+          <h2 class="shop-heading">Personalização da nave</h2>
+          <p>As naves são skins: mudam aparência, não atributos.</p>
+
+          <label class="color-picker-row" for="shipColorPicker">
+            Cor da nave
+            <input id="shipColorPicker" type="color" value="#62eaff" aria-label="Escolher cor da nave">
+          </label>
+
+          <div class="ship-shop" id="shipShop"></div>
+
+          <button class="main-button" id="backToHomeFromCustomButton">Voltar</button>
+        </section>
+
+        <section id="missionsTab" hidden>
+          <h2 class="shop-heading">Missões diárias</h2>
+          <p>As missões renovam diariamente.</p>
+          <div class="daily-missions" id="dailyMissionList"></div>
+
+          <button class="main-button" id="backToHomeFromMissionsButton">Voltar</button>
+        </section>
+
+        <section id="catalogTab" hidden>
+          <h2 class="shop-heading">Catálogo de power-ups</h2>
+          <p>Descubra cada power-up durante uma partida.</p>
+          <div class="catalog-grid" id="powerCatalog"></div>
+
+          <button class="main-button" id="backToHomeFromCatalogButton">Voltar</button>
+        </section>
+
+        <section id="achievementsTab" hidden>
+          <h2 class="shop-heading">Conquistas</h2>
+          <p>Desbloqueie raridades do universo Neon Vanguard.</p>
+          <div id="achievementContainer"></div>
+
+          <button class="main-button" id="backToHomeFromAchievementsButton">Voltar</button>
+        </section>
+
+        <section id="layoutTab" hidden>
+          <h2 class="shop-heading">Posição dos controles</h2>
+          <p>Ative a edição para arrastar o minimapa e o painel de controles do mobile.</p>
+
+          <div class="progress-actions">
+            <button id="toggleLayoutEdit" type="button">Editar posições</button>
+            <button id="resetLayout" type="button" class="danger-button">Restaurar posições</button>
+          </div>
+
+          <p id="layoutStatus" class="save-status" role="status" aria-live="polite"></p>
+
+          <button class="main-button" id="backToHomeFromLayoutButton">Voltar</button>
+        </section>
+
+        <section id="progressTab" hidden>
+          <h2 class="shop-heading">Progresso</h2>
+          <p>Salve o progresso neste navegador ou apague os dados.</p>
+
+          <div class="progress-actions">
+            <button id="saveProgressButton" type="button">Salvar progresso</button>
+            <button id="deleteProgressButton" type="button" class="danger-button">Apagar progresso</button>
+          </div>
+
+          <div id="saveStatus" class="save-status" role="status" aria-live="polite"></div>
+
+          <button class="main-button" id="backToHomeFromProgressButton">Voltar</button>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const WORLD_W = 2400;
+      const WORLD_H = 1500;
+      const camera = { x: 0, y: 0 };
+
+      const SHIPS = [
+        { id: "classic", name: "Clássica", color: "#91b5cf", cost: 0, description: "Formato equilibrado.", hull: "M25 0 L5 -6 L-8 -21 L-5 -7 L-18 -12 L-10 0 L-18 12 L-5 7 L-8 21 L5 6 Z" },
+        { id: "dart", name: "Dardo", color: "#ffad67", cost: 120, description: "Silhueta fina e pontuda.", hull: "M30 0 L-13 -10 L-5 -2 L-17 0 L-5 2 L-13 10 Z" },
+        { id: "tank", name: "Tanque", color: "#ffd166", cost: 180, description: "Casco largo e reforçado.", hull: "M22 0 L10 -12 L-11 -16 L-20 -10 L-16 0 L-20 10 L-11 16 L10 12 Z" },
+        { id: "stealth", name: "Furtiva", color: "#b78cff", cost: 240, description: "Asas angulares e estreitas.", hull: "M27 0 L-5 -5 L-19 -18 L-13 -4 L-23 -7 L-14 0 L-23 7 L-13 4 L-19 18 L-5 5 Z" },
+        { id: "royal", name: "Real", color: "#ff7189", cost: 320, description: "Asas duplas e elegantes.", hull: "M24 0 L5 -5 L-8 -19 L-7 -7 L-20 -14 L-14 -3 L-23 0 L-14 3 L-20 14 L-7 7 L-8 19 L5 5 Z" },
+        { id: "comet", name: "Cometa", color: "#73ffc2", cost: 400, description: "Casco curvo com estabilizadores.", hull: "M28 0 Q10 -8 -7 -5 L-20 -15 L-15 -3 L-23 0 L-15 3 L-20 15 L-7 5 Q10 8 28 0 Z" }
+      ];
+
+      const POWERUPS = [
+        { id: "medkit", name: "Kit médico", icon: "✚", color: "#73ffc2", description: "Restaura parte da vida." },
+        { id: "shield", name: "Escudo", icon: "⬡", color: "#62eaff", description: "Bloqueia o próximo dano por alguns segundos." },
+        { id: "double", name: "Tiro duplo", icon: "Ⅱ", color: "#b7ff7c", description: "Dispara duas balas paralelas." },
+        { id: "triple", name: "Tiro triplo", icon: "✦", color: "#ffe66d", description: "Dispara três balas em leque." },
+        { id: "laser", name: "Laser", icon: "╋", color: "#7cf7ff", description: "Dispara feixes curtos com intervalo." },
+        { id: "speed", name: "Velocidade", icon: "⚡", color: "#ffd166", description: "Aumenta temporariamente a velocidade." },
+        { id: "companion", name: "Companheira", icon: "◇", color: "#c7a8ff", description: "Nave auxiliar que acompanha e atira." }
+      ];
+
+      const MISSION_POOL = [
+        { id: "kills", kind: "kills", title: "Limpeza da arena", description: "Derrote 20 inimigos.", goal: 20, reward: 60 },
+        { id: "cash", kind: "cash", title: "Coleta de créditos", description: "Colete 40 moedas.", goal: 40, reward: 70 },
+        { id: "waves", kind: "waves", title: "Sobrevivente", description: "Conclua 3 ondas.", goal: 3, reward: 90 },
+        { id: "bosses", kind: "bosses", title: "Caçador de chefes", description: "Derrote um chefão.", goal: 1, reward: 110 }
+      ];
+
+      const ACHIEVEMENT_RARITY = {
+        common: { label: "Comum", color: "#8ca2ba" },
+        rare: { label: "Rara", color: "#62eaff" },
+        epic: { label: "Épica", color: "#b78cff" },
+        mythic: { label: "Mítica", color: "#ffd166" },
+        legendary: { label: "Lendária", color: "#ff7189" },
+        secret: { label: "Secreta", color: "#73ffc2" },
+        ultra: { label: "Ultra", color: "#ff9d00" }
+      };
+
+      const ACHIEVEMENTS = {
+        common: [
+          { id: "c01", title: "Primeiro passo", description: "Derrote 1 inimigo.", kind: "kills", goal: 1, icon: "✦" },
+          { id: "c02", title: "Frenesi", description: "Derrote 5 inimigos.", kind: "kills", goal: 5, icon: "⚡" },
+          { id: "c03", title: "Sobrevivente", description: "Sobreviva até a onda 2.", kind: "waves", goal: 2, icon: "🛡" },
+          { id: "c04", title: "Coletor", description: "Colete 15 moedas.", kind: "cash", goal: 15, icon: "💰" },
+          { id: "c05", title: "Tiro inicial", description: "Dispare 25 projéteis.", kind: "shots", goal: 25, icon: "◉" },
+          { id: "c06", title: "Arremate", description: "Acerte 10 vezes.", kind: "hits", goal: 10, icon: "◎" },
+          { id: "c07", title: "Velocidade", description: "Use o dash 5 vezes.", kind: "dashes", goal: 5, icon: "⟡" },
+          { id: "c08", title: "Mecânico", description: "Compre 1 melhoria.", kind: "buyupgrades", goal: 1, icon: "🛠" },
+          { id: "c09", title: "Mochileiro", description: "Colete 1 power-up.", kind: "powerups", goal: 1, icon: "✚" },
+          { id: "c10", title: "Aspirante", description: "Termine 1 onda.", kind: "waves", goal: 1, icon: "★" },
+          { id: "c11", title: "Rastreador", description: "Alcance 500 pontos.", kind: "score", goal: 500, icon: "⌁" },
+          { id: "c12", title: "Habilidade", description: "Ganhe 50 moedas.", kind: "money", goal: 50, icon: "₿" },
+          { id: "c13", title: "Artilheiro", description: "Dispare 80 projéteis.", kind: "shots", goal: 80, icon: "✧" },
+          { id: "c14", title: "Poeira de estrelas", description: "Atinja 2 ondas consecutivas.", kind: "waves", goal: 2, icon: "☄" },
+          { id: "c15", title: "Navegador", description: "Colete 5 power-ups.", kind: "powerups", goal: 5, icon: "✩" },
+          { id: "c16", title: "Perícia", description: "Derrote 12 inimigos.", kind: "kills", goal: 12, icon: "✹" },
+          { id: "c17", title: "Arenista", description: "Derrote 20 inimigos no total.", kind: "kills", goal: 20, icon: "❖" },
+          { id: "c18", title: "Acumulador", description: "Acumule 250 pontos.", kind: "score", goal: 250, icon: "⟁" },
+          { id: "c19", title: "Lenda local", description: "Ganhe 150 moedas.", kind: "money", goal: 150, icon: "◈" },
+          { id: "c20", title: "Sinal de vida", description: "Recupere vida com 1 item médico.", kind: "heals", goal: 1, icon: "✚" }
+        ],
+        rare: [
+          { id: "r01", title: "Varredura", description: "Derrote 30 inimigos.", kind: "kills", goal: 30, icon: "▣" },
+          { id: "r02", title: "Fuga", description: "Use 10 dashes.", kind: "dashes", goal: 10, icon: "⇢" },
+          { id: "r03", title: "Compra em massa", description: "Compre 5 melhorias.", kind: "buyupgrades", goal: 5, icon: "⚙" },
+          { id: "r04", title: "Caçador", description: "Derrote 1 boss.", kind: "bosses", goal: 1, icon: "☠" },
+          { id: "r05", title: "Batalha longa", description: "Complete 4 ondas.", kind: "waves", goal: 4, icon: "✹" },
+          { id: "r06", title: "Invasão", description: "Colete 100 moedas.", kind: "cash", goal: 100, icon: "💸" },
+          { id: "r07", title: "Vetor", description: "Dispare 200 projéteis.", kind: "shots", goal: 200, icon: "☍" },
+          { id: "r08", title: "Mestre do hélio", description: "Ganhe 1000 pontos.", kind: "score", goal: 1000, icon: "✪" },
+          { id: "r09", title: "Furtivo", description: "Pegue 10 power-ups.", kind: "powerups", goal: 10, icon: "✩" },
+          { id: "r10", title: "Tempo de reação", description: "Acerte 25 vezes.", kind: "hits", goal: 25, icon: "✧" },
+          { id: "r11", title: "Cadeia", description: "Derrote 40 inimigos.", kind: "kills", goal: 40, icon: "⬢" },
+          { id: "r12", title: "Vanguardista", description: "Sobreviva até a onda 5.", kind: "waves", goal: 5, icon: "◇" },
+          { id: "r13", title: "Mão forte", description: "Ganhe 300 moedas.", kind: "money", goal: 300, icon: "◬" },
+          { id: "r14", title: "Raio de luz", description: "Pegue 1 laser.", kind: "powerups", goal: 1, icon: "╋" },
+          { id: "r15", title: "Fogo cruzado", description: "Dispare 300 projéteis.", kind: "shots", goal: 300, icon: "✶" },
+          { id: "r16", title: "Acesso rápido", description: "Use 20 dashes.", kind: "dashes", goal: 20, icon: "⇥" },
+          { id: "r17", title: "Cruzada", description: "Derrote 50 inimigos.", kind: "kills", goal: 50, icon: "⬡" },
+          { id: "r18", title: "Patrono", description: "Ganhe 2000 pontos.", kind: "score", goal: 2000, icon: "⊕" },
+          { id: "r19", title: "Bônus de campo", description: "Colete 200 moedas.", kind: "cash", goal: 200, icon: "✦" },
+          { id: "r20", title: "Mestre dos itens", description: "Colete 15 power-ups.", kind: "powerups", goal: 15, icon: "✪" }
+        ],
+        epic: [
+          { id: "e01", title: "Fenda em azul", description: "Derrote 75 inimigos.", kind: "kills", goal: 75, icon: "⟐" },
+          { id: "e02", title: "Sinal de fogo", description: "Derrote 3 bosses.", kind: "bosses", goal: 3, icon: "☄" },
+          { id: "e03", title: "Mão firme", description: "Complete 7 ondas.", kind: "waves", goal: 7, icon: "⬢" },
+          { id: "e04", title: "Bancada solar", description: "Acumule 3500 pontos.", kind: "score", goal: 3500, icon: "✫" },
+          { id: "e05", title: "Lava elétrica", description: "Dispare 600 projéteis.", kind: "shots", goal: 600, icon: "⬣" },
+          { id: "e06", title: "Baterista", description: "Use 35 dashes.", kind: "dashes", goal: 35, icon: "⟢" },
+          { id: "e07", title: "Caixa forte", description: "Colete 500 moedas.", kind: "cash", goal: 500, icon: "💎" },
+          { id: "e08", title: "Força de comando", description: "Compre 10 melhorias.", kind: "buyupgrades", goal: 10, icon: "⚒" },
+          { id: "e09", title: "Monarca", description: "Descubra 20 power-ups.", kind: "powerups", goal: 20, icon: "✧" },
+          { id: "e10", title: "Dois veios", description: "Acerte 80 tiros.", kind: "hits", goal: 80, icon: "◍" }
+        ],
+        mythic: [
+          { id: "m01", title: "Metrópole", description: "Derrote 120 inimigos.", kind: "kills", goal: 120, icon: "⬢" },
+          { id: "m02", title: "Mestre do setor", description: "Derrote 5 bosses.", kind: "bosses", goal: 5, icon: "✹" },
+          { id: "m03", title: "Onda infinita", description: "Complete 10 ondas.", kind: "waves", goal: 10, icon: "∞" },
+          { id: "m04", title: "Lembrança de estrelas", description: "Acumule 7500 pontos.", kind: "score", goal: 7500, icon: "✶" },
+          { id: "m05", title: "Poder feroz", description: "Dispare 1200 projéteis.", kind: "shots", goal: 1200, icon: "✹" },
+          { id: "m06", title: "Veloz", description: "Use 60 dashes.", kind: "dashes", goal: 60, icon: "⚡" },
+          { id: "m07", title: "Tesouro do campo", description: "Colete 900 moedas.", kind: "cash", goal: 900, icon: "⍟" },
+          { id: "m08", title: "Derradeiro ciclo", description: "Compre 15 melhorias.", kind: "buyupgrades", goal: 15, icon: "⚙" },
+          { id: "m09", title: "Especialista", description: "Pegue 35 power-ups.", kind: "powerups", goal: 35, icon: "✪" },
+          { id: "m10", title: "Círculo de fogo", description: "Acerte 120 tiros.", kind: "hits", goal: 120, icon: "◎" }
+        ],
+        legendary: [
+          { id: "l01", title: "Lenda azul", description: "Derrote 180 inimigos.", kind: "kills", goal: 180, icon: "✦" },
+          { id: "l02", title: "Caçador de titãs", description: "Derrote 8 bosses.", kind: "bosses", goal: 8, icon: "☠" },
+          { id: "l03", title: "Fronteira", description: "Complete 15 ondas.", kind: "waves", goal: 15, icon: "✹" },
+          { id: "l04", title: "Constelação", description: "Acumule 12000 pontos.", kind: "score", goal: 12000, icon: "✧" },
+          { id: "l05", title: "Furacão", description: "Dispare 2000 projéteis.", kind: "shots", goal: 2000, icon: "✦" },
+          { id: "l06", title: "Fórmula de vôo", description: "Use 90 dashes.", kind: "dashes", goal: 90, icon: "⇠" },
+          { id: "l07", title: "Baú de néon", description: "Colete 1800 moedas.", kind: "cash", goal: 1800, icon: "✪" },
+          { id: "l08", title: "Comando final", description: "Compre 20 melhorias.", kind: "buyupgrades", goal: 20, icon: "⚒" },
+          { id: "l09", title: "Arsenal", description: "Pegue 50 power-ups.", kind: "powerups", goal: 50, icon: "✹" },
+          { id: "l10", title: "Ponta de flecha", description: "Acerte 180 tiros.", kind: "hits", goal: 180, icon: "⬣" }
+        ],
+        secret: [
+          { id: "s01", title: "Sombra", description: "Derrote um inimigo sem levar dano.", kind: "clean", goal: 1, icon: "✧" },
+          { id: "s02", title: "Caminho oculto", description: "Pegue um power-up secreto.", kind: "secretfind", goal: 1, icon: "☾" },
+          { id: "s03", title: "Neon sem descanso", description: "Conclua 3 ondas sem parar.", kind: "waves", goal: 3, icon: "◆" },
+          { id: "s04", title: "Rastro de luz", description: "Use dash em momento crítico.", kind: "dashes", goal: 1, icon: "⚡" },
+          { id: "s05", title: "Despertar", description: "Ative o escudo pela primeira vez.", kind: "shield", goal: 1, icon: "⬡" },
+          { id: "s06", title: "Baterias vivas", description: "Use o laser 3 vezes.", kind: "laser", goal: 3, icon: "╋" },
+          { id: "s07", title: "Trilha de ouro", description: "Colete 1000 moedas em uma sessão.", kind: "cash", goal: 1000, icon: "✦" },
+          { id: "s08", title: "Coroa de nêon", description: "Derrote 1 boss sem sofrer dano.", kind: "bossclean", goal: 1, icon: "♛" },
+          { id: "s09", title: "Sol interno", description: "Alcance 15000 pontos.", kind: "score", goal: 15000, icon: "☼" },
+          { id: "s10", title: "Mistério", description: "Encontre 25 power-ups.", kind: "powerups", goal: 25, icon: "✪" }
+        ],
+        ultra: [
+          { id: "u01", title: "Vanguardista final", description: "Derrote 250 inimigos.", kind: "kills", goal: 250, icon: "☄" },
+          { id: "u02", title: "Soberano do espaço", description: "Derrote 15 bosses.", kind: "bosses", goal: 15, icon: "☠" },
+          { id: "u03", title: "Nexo de estrela", description: "Acumule 25000 pontos.", kind: "score", goal: 25000, icon: "✦" },
+          { id: "u04", title: "Mestre absoluto", description: "Complete 20 ondas.", kind: "waves", goal: 20, icon: "✹" },
+          { id: "u05", title: "Dono da aurora", description: "Colete 3000 moedas.", kind: "cash", goal: 3000, icon: "💠" }
+        ]
+      };
+
+      const ACHIEVEMENT_LIST = Object.entries(ACHIEVEMENTS).flatMap(([rarity, items]) =>
+        items.map(item => ({ ...item, rarity }))
+      );
+
+      const $ = (id) => document.getElementById(id);
+      const canvas = $("canvas");
+      const ctx = canvas.getContext("2d");
+      const minimap = $("minimap");
+      const minimapCtx = minimap.getContext("2d");
+      const gameElement = document.querySelector(".game");
+
+      let W = 960;
+      let H = 600;
+      let dpr = 1;
+      let audioContext = null;
+      let state = "menu";
+      let score = 0;
+      let bestScore = loadBestScore();
+      let wave = 1;
+      let enemiesToSpawn = 0;
+      let spawnTimer = 0;
+      let bossSpawned = false;
+      let bossesDefeated = 0;
+      let intermission = 0;
+      let waveBanner = 0;
+      let time = 0;
+      let lastTime = 0;
+      let spaceDown = false;
+      let movePointerId = null;
+      let mobileFire = false;
+      let dailyMissionState = null;
+      let layoutEditing = false;
+      let selectedLayoutItem = null;
+
+      const mouse = { x: W / 2, y: H / 2, down: false };
+      const virtualMove = { x: 0, y: 0 };
+      const keys = new Set();
+      const bullets = [];
+      const enemies = [];
+      const hostileShots = [];
+      const particles = [];
+      const powerUps = [];
+      const cashDrops = [];
+      const stars = Array.from({ length: 180 }, () => ({
+        x: Math.random() * WORLD_W,
+        y: Math.random() * WORLD_H,
+        size: Math.random() * 1.5 + .4,
+        speed: Math.random() * 18 + 7
+      }));
+
+      const rand = (min, max) => Math.random() * (max - min) + min;
+      const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
+
+      function resizeCanvas() {
+        const rect = gameElement.getBoundingClientRect();
+        W = Math.max(1, rect.width);
+        H = Math.max(1, rect.height);
+        dpr = Math.min(window.devicePixelRatio || 1, 2);
+        canvas.width = Math.round(W * dpr);
+        canvas.height = Math.round(H * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        updateCamera();
+        applyLayout();
+      }
+
+      function updateCamera() {
+        camera.x = clamp(player.x - W / 2, 0, WORLD_W - W);
+        camera.y = clamp(player.y - H / 2, 0, WORLD_H - H);
+      }
+
+      function isEnemyInView(enemy) {
+        return enemy.x + enemy.radius >= camera.x &&
+          enemy.x - enemy.radius <= camera.x + W &&
+          enemy.y + enemy.radius >= camera.y &&
+          enemy.y - enemy.radius <= camera.y + H;
+      }
+
+      function sound(frequency = 440, duration = .06, type = "sine", volume = .025) {
+        try {
+          audioContext ||= new (window.AudioContext || window.webkitAudioContext)();
+          const oscillator = audioContext.createOscillator();
+          const gain = audioContext.createGain();
+          oscillator.type = type;
+          oscillator.frequency.value = frequency;
+          gain.gain.value = volume;
+          gain.gain.exponentialRampToValueAtTime(.001, audioContext.currentTime + duration);
+          oscillator.connect(gain);
+          gain.connect(audioContext.destination);
+          oscillator.start();
+          oscillator.stop(audioContext.currentTime + duration);
+        } catch {}
+      }
+
+      function loadBestScore() {
+        try {
+          const value = Number(localStorage.getItem("neonVanguardBest") || 0);
+          return Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
+        } catch { return 0; }
+      }
+
+      function getMissionDay() {
+        return Math.floor(Date.now() / 86_400_000);
+      }
+
+      function getTodaysMissionDefinitions() {
+        const start = getMissionDay() % MISSION_POOL.length;
+        return Array.from({ length: 3 }, (_, i) => MISSION_POOL[(start + i) % MISSION_POOL.length]);
+      }
+
+      function loadDailyMissionState() {
+        try {
+          const saved = JSON.parse(localStorage.getItem("neonVanguardDailyMissions") || "null");
+          if (saved && saved.day === getMissionDay() && saved.progress && Array.isArray(saved.claimed)) return saved;
+        } catch {}
+        return { day: getMissionDay(), progress: {}, claimed: [] };
+      }
+
+      function saveDailyMissionState() {
+        try { localStorage.setItem("neonVanguardDailyMissions", JSON.stringify(dailyMissionState)); } catch {}
+      }
+
+      function refreshDailyMissionDay() {
+        if (dailyMissionState.day !== getMissionDay()) {
+          dailyMissionState = { day: getMissionDay(), progress: {}, claimed: [] };
+          saveDailyMissionState();
+        }
+      }
+
+      function recordMissionProgress(kind, amount = 1) {
+        refreshDailyMissionDay();
+        let changed = false;
+
+        for (const mission of getTodaysMissionDefinitions()) {
+          if (mission.kind !== kind) continue;
+          const current = dailyMissionState.progress[mission.id] || 0;
+          const next = Math.min(mission.goal, current + amount);
+          if (next !== current) {
+            dailyMissionState.progress[mission.id] = next;
+            changed = true;
+          }
+        }
+
+        if (changed) {
+          saveDailyMissionState();
+          renderDailyMissions();
+        }
+      }
+
+      function loadSave() {
+        const empty = {
+          money: 0,
+          speed: 0,
+          damage: 0,
+          health: 0,
+          ownedShips: ["classic"],
+          selectedShip: "classic",
+          shipColor: "#62eaff",
+          foundPowerUps: [],
+          achievements: { unlocked: [], progress: {} }
+        };
+
+        try {
+          const saved = JSON.parse(localStorage.getItem("neonVanguardSave") || "{}");
+          if (!saved || typeof saved !== "object" || Array.isArray(saved)) return empty;
+
+          const safeInt = (value, max) => {
+            const n = Number(value);
+            return Number.isFinite(n) ? clamp(Math.floor(n), 0, max) : 0;
+          };
+
+          const achievements = saved.achievements && typeof saved.achievements === "object" ? saved.achievements : {};
+          const unlocked = Array.isArray(achievements.unlocked) ? achievements.unlocked : [];
+          const progress = achievements.progress && typeof achievements.progress === "object" ? achievements.progress : {};
+
+          return {
+            money: safeInt(saved.money, 1_000_000_000),
+            speed: safeInt(saved.speed, 10),
+            damage: safeInt(saved.damage, 10),
+            health: safeInt(saved.health, 10),
+            ownedShips: Array.isArray(saved.ownedShips)
+              ? [...new Set(["classic", ...saved.ownedShips.filter(id => SHIPS.some(ship => ship.id === id))])]
+              : ["classic"],
+            selectedShip: SHIPS.some(ship => ship.id === saved.selectedShip) ? saved.selectedShip : "classic",
+            shipColor: typeof saved.shipColor === "string" && /^#[0-9a-f]{6}$/i.test(saved.shipColor)
+              ? saved.shipColor
+              : "#62eaff",
+            foundPowerUps: Array.isArray(saved.foundPowerUps)
+              ? [...new Set(saved.foundPowerUps.filter(id => POWERUPS.some(power => power.id === id)))]
+              : [],
+            achievements: {
+              unlocked: unlocked.filter(id => ACHIEVEMENT_LIST.some(a => a.id === id)),
+              progress: Object.fromEntries(
+                Object.entries(progress).filter(([id]) => ACHIEVEMENT_LIST.some(a => a.id === id))
+              )
+            }
+          };
+        } catch {
+          return empty;
+        }
+      }
+
+      const save = loadSave();
+      dailyMissionState = loadDailyMissionState();
+
+      const player = {
+        x: WORLD_W / 2,
+        y: WORLD_H / 2,
+        vx: 0,
+        vy: 0,
+        radius: 16,
+        angle: 0,
+        health: 100,
+        maxHealth: 100,
+        cooldown: 0,
+        invulnerable: 0,
+        shield: 0,
+        doubleShot: 0,
+        tripleShot: 0,
+        laserTime: 0,
+        laserCooldown: 0,
+        laserFlash: 0,
+        laserAngle: 0,
+        speedBoost: 0,
+        companion: null,
+        dashCooldown: 0,
+        dashTime: 0,
+        dashX: 0,
+        dashY: 0,
+        moving: false
+      };
+
+      function persist() {
+        try { localStorage.setItem("neonVanguardSave", JSON.stringify(save)); } catch {}
+      }
+
+      function getAchievementProgressMap() {
+        if (!save.achievements || !save.achievements.progress) {
+          save.achievements = { unlocked: [], progress: {} };
+        }
+        return save.achievements.progress;
+      }
+
+      function trackAchievementProgress(kind, amount = 1) {
+        const progressMap = getAchievementProgressMap();
+        const all = ACHIEVEMENT_LIST.filter(item => item.kind === kind);
+
+        for (const item of all) {
+          const current = Number(progressMap[item.id] || 0);
+          const next = Math.min(item.goal, current + amount);
+          if (next !== current) progressMap[item.id] = next;
+        }
+
+        syncAchievementState();
+      }
+
+      function syncAchievementState() {
+        const unlocked = new Set();
+        const progressMap = getAchievementProgressMap();
+
+        for (const item of ACHIEVEMENT_LIST) {
+          const progress = Number(progressMap[item.id] || 0);
+          if (progress >= item.goal) unlocked.add(item.id);
+        }
+
+        save.achievements = {
+          unlocked: [...unlocked],
+          progress: progressMap
+        };
+
+        persist();
+        renderAchievements();
+      }
+
+      function showTab(tab) {
+        const names = ["home", "shop", "custom", "missions", "catalog", "achievements", "layout", "progress"];
+        for (const name of names) {
+          $(name + "Tab").hidden = name !== tab;
+        }
+
+        document.querySelectorAll(".tab-button").forEach(button => {
+          button.classList.toggle("active", button.dataset.tab === tab);
+        });
+
+        if (tab === "shop") updateShop();
+        if (tab === "custom") renderShipShop();
+        if (tab === "missions") renderDailyMissions();
+        if (tab === "catalog") renderPowerCatalog();
+        if (tab === "achievements") renderAchievements();
+        if (tab === "layout") {
+          $("layoutStatus").textContent = layoutEditing ? "Arraste os itens para ajustar a posição." : "Ajuste a posição do minimapa e controles.";
+        }
+      }
+
+      function upgradeCost(type) {
+        return 30 + save[type] * 35 + save[type] * save[type] * 5;
+      }
+
+      function updateShop() {
+        $("wallet").textContent = save.money;
+        $("moneyHud").textContent = save.money;
+
+        for (const type of ["speed", "damage", "health"]) {
+          $(type + "Level").textContent = "Nível " + save[type];
+          const button = $("buy" + type[0].toUpperCase() + type.slice(1));
+          const cost = upgradeCost(type);
+          button.textContent = save[type] >= 10 ? "Nível máximo" : "Comprar · " + cost + " 💰";
+          button.disabled = save.money < cost || save[type] >= 10;
+        }
+
+        renderShipShop();
+        renderDailyMissions();
+        renderPowerCatalog();
+      }
+
+      function renderShipShop() {
+        const container = $("shipShop");
+        container.innerHTML = SHIPS.map(ship => {
+          const owned = save.ownedShips.includes(ship.id);
+          const selected = save.selectedShip === ship.id;
+          const label = selected ? "Selecionada" : owned ? "Selecionar" : `Comprar · ${ship.cost} 💰`;
+
+          return `
+            <article class="ship-card ${selected ? "selected" : ""}">
+              <div class="ship-preview">
+                <svg viewBox="-32 -25 64 50" aria-label="Nave ${ship.name}">
+                  <path d="${ship.hull}" fill="${selected ? save.shipColor : ship.color}"
+                    stroke="#e8f7ff" stroke-width="1.8" stroke-linejoin="round"/>
+                  <ellipse cx="8" cy="0" rx="6" ry="2.8" fill="#dffaff"/>
+                </svg>
+              </div>
+              <h3>${ship.name}</h3>
+              <p>${ship.description}</p>
+              <button type="button" data-ship="${ship.id}"
+                ${selected || (!owned && save.money < ship.cost) ? "disabled" : ""}>${label}</button>
+            </article>
+          `;
+        }).join("");
+
+        container.querySelectorAll("[data-ship]").forEach(button => {
+          button.addEventListener("click", () => {
+            const ship = SHIPS.find(item => item.id === button.dataset.ship);
+            if (!ship) return;
+
+            if (!save.ownedShips.includes(ship.id)) {
+              if (save.money < ship.cost) return;
+              save.money -= ship.cost;
+              save.ownedShips.push(ship.id);
+            }
+
+            save.selectedShip = ship.id;
+            save.shipColor = ship.color;
+            $("shipColorPicker").value = ship.color;
+            persist();
+            updateShop();
+          });
+        });
+      }
+
+      function renderDailyMissions() {
+        refreshDailyMissionDay();
+        const container = $("dailyMissionList");
+        if (!container) return;
+
+        container.innerHTML = getTodaysMissionDefinitions().map(mission => {
+          const progress = Math.min(mission.goal, dailyMissionState.progress[mission.id] || 0);
+          const claimed = dailyMissionState.claimed.includes(mission.id);
+          const complete = progress >= mission.goal;
+
+          return `
+            <article class="mission-card">
+              <h3>${mission.title}</h3>
+              <p>${mission.description}</p>
+              <div class="mission-progress">
+                <div class="mission-progress-fill" style="width:${Math.floor(progress / mission.goal * 100)}%"></div>
+              </div>
+              <div class="mission-footer">
+                <span>${progress} / ${mission.goal} · 💰 ${mission.reward}</span>
+                <button type="button" data-claim-mission="${mission.id}"
+                  ${!complete || claimed ? "disabled" : ""}>
+                  ${claimed ? "Resgatada" : complete ? "Resgatar" : "Em andamento"}
+                </button>
+              </div>
+            </article>
+          `;
+        }).join("");
+      }
+
+      function renderPowerCatalog() {
+        const container = $("powerCatalog");
+        if (!container) return;
+
+        container.innerHTML = POWERUPS.map(power => {
+          const found = save.foundPowerUps.includes(power.id);
+          return `
+            <article class="catalog-card">
+              <div class="catalog-icon ${found ? "" : "unknown"}"
+                style="--power-color:${found ? power.color : "#9aa8bb"}"
+                aria-hidden="true">${found ? power.icon : "?"}</div>
+              <div>
+                <h3>${found ? power.name : "Desconhecido"}</h3>
+                <p>${found ? power.description : "Encontre este power-up durante uma partida."}</p>
+              </div>
+            </article>
+          `;
+        }).join("");
+      }
+
+      function renderAchievements() {
+        const container = $("achievementContainer");
+        if (!container) return;
+
+        const groups = [
+          ["common", "Comum"],
+          ["rare", "Rara"],
+          ["epic", "Épica"],
+          ["mythic", "Mítica"],
+          ["legendary", "Lendária"],
+          ["secret", "Secreta"],
+          ["ultra", "Ultra"]
+        ];
+
+        const progressMap = getAchievementProgressMap();
+        const unlocked = new Set(save.achievements?.unlocked || []);
+
+        container.innerHTML = groups.map(([rarity, label]) => {
+          const list = ACHIEVEMENTS[rarity];
+
+          return `
+            <section class="achievement-section">
+              <h3>${label} · ${list.length}</h3>
+              <div class="achievement-grid">
+                ${list.map(item => {
+                  const current = Number(progressMap[item.id] || 0);
+                  const done = current >= item.goal || unlocked.has(item.id);
+                  const secretLocked = rarity === "secret" && !done;
+                  const percent = Math.min(100, (current / item.goal) * 100);
+                  const rarityInfo = ACHIEVEMENT_RARITY[rarity];
+
+                  return `
+                    <article class="achievement-card ${done ? "" : "locked"}">
+                      <div class="achievement-header">
+                        <div class="achievement-icon">${item.icon}</div>
+                        <span class="achievement-rarity" style="background:${rarityInfo.color};">${rarityInfo.label}</span>
+                      </div>
+                      <h3>${item.title}</h3>
+                      <p>${secretLocked ? "Conquista secreta. Continue jogando para descobrir." : item.description}</p>
+                      ${secretLocked ? "" : `
+                        <div class="achievement-progress-bar">
+                          <div class="achievement-progress-fill" style="width:${percent}%"></div>
+                        </div>
+                        <div class="achievement-meta">
+                          <span>${done ? "Concluída" : "Progresso"}</span>
+                          <span>${Math.min(current, item.goal)} / ${item.goal}</span>
+                        </div>
+                      `}
+                    </article>
+                  `;
+                }).join("")}
+              </div>
+            </section>
+          `;
+        }).join("");
+      }
+
+      function updateHud() {
+        $("score").textContent = Math.floor(score);
+        $("bestScore").textContent = bestScore;
+        $("wave").textContent = wave;
+        $("dashHud").textContent = player.dashCooldown <= 0 ? "PRONTO" : player.dashCooldown.toFixed(1) + "s";
+
+        const ratio = player.maxHealth > 0 ? player.health / player.maxHealth : 0;
+        $("health").style.width = (ratio * 100) + "%";
+        $("health").style.backgroundColor = ratio <= .25 ? "#ff405d" : ratio <= .55 ? "#ffc857" : "#65f0a8";
+        gameElement.classList.toggle("critical-health", ratio <= .2);
+
+        const finalBoss = enemies.find(enemy => enemy.type === "boss" && enemy.finalBoss);
+        const box = $("bossHealthBox");
+        if (finalBoss) {
+          box.hidden = false;
+          const fill = $("bossHealth");
+          fill.style.width = `${clamp(finalBoss.hp / finalBoss.maxHp, 0, 1) * 100}%`;
+          const label = document.querySelector(".boss-health-label");
+          label.textContent = "Boss final";
+        } else {
+          box.hidden = true;
+        }
+      }
+
+      function updateBestScore() {
+        if (score <= bestScore) return;
+        bestScore = Math.floor(score);
+        try { localStorage.setItem("neonVanguardBest", String(bestScore)); } catch {}
+        updateHud();
+      }
+
+      function showOverlay(title, message, buttonText) {
+        $("title").textContent = title;
+        $("message").textContent = message;
+        $("startButton").textContent = buttonText;
+        $("overlay").classList.remove("hidden");
+      }
+
+      function buyUpgrade(type) {
+        if (save[type] >= 10) return;
+        const cost = upgradeCost(type);
+        if (save.money < cost) return;
+
+        save.money -= cost;
+        save[type]++;
+        trackAchievementProgress("buyupgrades", 1);
+        persist();
+
+        if (type === "health") {
+          player.maxHealth = 100 + save.health * 10;
+          player.health = Math.min(player.maxHealth, player.health + 20);
+        }
+
+        updateHud();
+        updateShop();
+      }
+
+      function beginWave(number) {
+        wave = number;
+        const bossWave = wave % 5 === 0;
+        enemiesToSpawn = bossWave ? 0 : 5 + wave * 2;
+        spawnTimer = .45;
+        bossSpawned = false;
+        waveBanner = 2;
+        updateCamera();
+
+        if (bossWave) spawnBoss();
+        updateHud();
+      }
+
+      function resetGame() {
+        score = 0;
+        bullets.length = 0;
+        enemies.length = 0;
+        hostileShots.length = 0;
+        particles.length = 0;
+        powerUps.length = 0;
+        cashDrops.length = 0;
+
+        player.maxHealth = 100 + save.health * 10;
+        player.health = player.maxHealth;
+        player.x = WORLD_W / 2;
+        player.y = WORLD_H / 2;
+        player.vx = 0;
+        player.vy = 0;
+        player.cooldown = 0;
+        player.invulnerable = 0;
+        player.shield = 0;
+        player.doubleShot = 0;
+        player.tripleShot = 0;
+        player.laserTime = 0;
+        player.laserCooldown = 0;
+        player.laserFlash = 0;
+        player.speedBoost = 0;
+        player.companion = null;
+        player.dashCooldown = 0;
+        player.dashTime = 0;
+
+        bossesDefeated = 0;
+        intermission = 0;
+        beginWave(1);
+      }
+
+      function startGame() {
+        resetGame();
+        state = "playing";
+        $("overlay").classList.add("hidden");
+        showTab("home");
+      }
+
+      function addParticles(x, y, color, count = 12) {
+        for (let i = 0; i < count; i++) {
+          const angle = rand(0, Math.PI * 2);
+          const speed = rand(40, 190);
+          particles.push({
+            x, y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            life: rand(.25, .65),
+            maxLife: .65,
+            radius: rand(1.5, 4),
+            color
+          });
+        }
+      }
+
+      function dropCash(x, y, amount) {
+        cashDrops.push({
+          x, y, amount,
+          vx: rand(-35, 35),
+          vy: rand(-35, 35),
+          life: 15,
+          spin: rand(0, Math.PI * 2)
+        });
+      }
+
+      function dropPowerUp(x, y, forced = false) {
+        if (!forced && Math.random() > .2) return;
+
+        const roll = Math.random();
+        const type = roll < .18 ? "medkit"
+          : roll < .34 ? "shield"
+          : roll < .50 ? "double"
+          : roll < .56 ? "triple"
+          : roll < .72 ? "laser"
+          : roll < .94 ? "speed"
+          : "companion";
+
+        powerUps.push({ x, y, type, spin: rand(0, Math.PI * 2), life: 14 });
+      }
+
+      function spawnEnemyAt(x, y, forcedType = null) {
+        const roll = Math.random();
+        let type = forcedType || "scout";
+
+        if (!forcedType) {
+          if (wave >= 14 && roll > .97) type = "harness";
+          else if (wave >= 12 && roll > .93) type = "healer";
+          else if (wave >= 10 && roll > .89) type = "rush";
+          else if (wave >= 9 && roll > .84) type = "spammer";
+          else if (wave >= 7 && roll > .78) type = "spawner";
+          else if (wave >= 5 && roll > .70) type = "brute";
+          else if (wave >= 3 && roll > .55) type = "shooter";
+          else if (wave >= 3 && roll > .40) type = "runner";
+        }
+
+        const stats = {
+          scout: { radius: 15, speed: 65 + wave * 4, damage: 10, hp: 3 + Math.floor(wave / 9), color: "#ff7189" },
+          runner: { radius: 12, speed: 100 + wave * 5, damage: 12, hp: 3 + Math.floor(wave / 10), color: "#ffad67" },
+          brute: { radius: 21, speed: 48 + wave * 3, damage: 16, hp: 5 + Math.floor(wave / 7), color: "#ffd166" },
+          shooter: { radius: 16, speed: 58 + wave * 2, damage: 10, hp: 4 + Math.floor(wave / 10), color: "#b78cff" },
+          spammer: { radius: 18, speed: 55 + wave * 2, damage: 8, hp: 5 + Math.floor(wave / 9), color: "#ff8be8" },
+          spawner: { radius: 20, speed: 42, damage: 14, hp: 5 + Math.floor(wave / 8), color: "#73ffc2" },
+          healer: { radius: 19, speed: 30, damage: 8, hp: 6 + Math.floor(wave / 8), color: "#62eaff" },
+          harness: { radius: 20, speed: 30, damage: 9, hp: 7 + Math.floor(wave / 8), color: "#c7a8ff" },
+          rush: { radius: 17, speed: 72, damage: 18, hp: 5 + Math.floor(wave / 8), color: "#ff5573" }
+        }[type];
+
+        const hp = stats.hp + 2;
+        const shieldChance = Math.min(.08 + Math.max(0, wave - 5) * .012, .35);
+        const maxShield = wave >= 5 && Math.random() < shieldChance ? Math.max(2, Math.ceil(hp * .5)) : 0;
+
+        const enemy = {
+          type, x, y,
+          radius: stats.radius,
+          speed: Math.min(stats.speed, 205),
+          damage: Math.min(stats.damage, 42),
+          hp, maxHp: hp,
+          shield: maxShield,
+          maxShield,
+          color: stats.color,
+          angle: 0,
+          wobble: rand(0, Math.PI * 2),
+          attackTimer: rand(1.2, 2.2),
+          spawnTimer: rand(2.5, 4.2),
+          supportTimer: 1,
+          anchorMoving: false,
+          rushTimer: rand(1.5, 2.5),
+          rushAttack: null
+        };
+
+        if (type === "spawner") {
+          let targetX = x;
+          let targetY = y;
+          for (let attempt = 0; attempt < 12; attempt++) {
+            targetX = rand(enemy.radius, WORLD_W - enemy.radius);
+            targetY = rand(enemy.radius, WORLD_H - enemy.radius);
+            if (Math.hypot(targetX - player.x, targetY - player.y) >= 380) break;
+          }
+          enemy.anchorX = targetX;
+          enemy.anchorY = targetY;
+          enemy.anchorMoving = Math.hypot(targetX - x, targetY - y) > 8;
+        }
+
+        enemies.push(enemy);
+      }
+
+      function spawnEnemy() {
+        const side = Math.floor(Math.random() * 4);
+        let x, y;
+
+        if (side === 0) { x = rand(0, WORLD_W); y = -25; }
+        else if (side === 1) { x = WORLD_W + 25; y = rand(0, WORLD_H); }
+        else if (side === 2) { x = rand(0, WORLD_W); y = WORLD_H + 25; }
+        else { x = -25; y = rand(0, WORLD_H); }
+
+        spawnEnemyAt(x, y);
+      }
+
+      function shieldColor(current, maximum) {
+        if (maximum <= 0) return "#65f0a8";
+        const ratio = current / maximum;
+        if (ratio > .66) return "#65f0a8";
+        if (ratio > .33) return "#ffd166";
+        return "#ff6d79";
+      }
+
+      function damageEnemy(index, amount) {
+        const enemy = enemies[index];
+        if (!enemy) return;
+
+        if (enemy.shield > 0) {
+          const absorbed = Math.min(enemy.shield, amount);
+          enemy.shield -= absorbed;
+          addParticles(enemy.x, enemy.y, shieldColor(enemy.shield, enemy.maxShield), 4);
+          return;
+        }
+
+        enemy.hp -= amount;
+        if (enemy.hp <= 0) defeatEnemy(index);
+      }
+
+      function makeCharge(entity, speed, returnToViewCenter) {
+        const angle = Math.atan2(player.y - entity.y, player.x - entity.x);
+        const dx = Math.cos(angle);
+        const dy = Math.sin(angle);
+
+        const distanceX = dx > 0
+          ? (WORLD_W - entity.radius - entity.x) / dx
+          : dx < 0 ? (entity.radius - entity.x) / dx : Infinity;
+
+        const distanceY = dy > 0
+          ? (WORLD_H - entity.radius - entity.y) / dy
+          : dy < 0 ? (entity.radius - entity.y) / dy : Infinity;
+
+        const distance = Math.max(0, Math.min(distanceX, distanceY) - 2);
+
+        return {
+          kind: "charge",
+          phase: "warning",
+          angle,
+          timer: .8,
+          speed,
+          endX: clamp(entity.x + dx * distance, entity.radius, WORLD_W - entity.radius),
+          endY: clamp(entity.y + dy * distance, entity.radius, WORLD_H - entity.radius),
+          returnX: returnToViewCenter ? clamp(camera.x + W / 2, entity.radius, WORLD_W - entity.radius) : entity.x,
+          returnY: returnToViewCenter ? clamp(camera.y + H / 2, entity.radius, WORLD_H - entity.radius) : entity.y,
+          hitPlayer: false
+        };
+      }
+
+      function updateCharge(entity, charge, dt) {
+        if (charge.phase === "warning") {
+          charge.timer -= dt;
+          if (charge.timer <= 0) {
+            charge.phase = "rush";
+          }
+          return false;
+        }
+
+        const returning = charge.phase === "return";
+        const targetX = returning ? charge.returnX : charge.endX;
+        const targetY = returning ? charge.returnY : charge.endY;
+        const dx = targetX - entity.x;
+        const dy = targetY - entity.y;
+        const distance = Math.hypot(dx, dy);
+
+        if (distance <= 1 || distance <= charge.speed * dt) {
+          entity.x = targetX;
+          entity.y = targetY;
+
+          if (!returning) {
+            charge.phase = "return";
+          } else {
+            return true;
+          }
+          return false;
+        }
+
+        const s = charge.speed * (returning ? 1.8 : 1);
+        entity.x += (dx / distance) * s * dt;
+        entity.y += (dy / distance) * s * dt;
+
+        if (!returning && !charge.hitPlayer &&
+            Math.hypot(player.x - entity.x, player.y - entity.y) < player.radius + entity.radius) {
+          charge.hitPlayer = true;
+          damagePlayer(entity.damage);
+        }
+
+        return false;
+      }
+
+      function spawnBoss() {
+        bossSpawned = true;
+
+        const finalBoss = wave === 100;
+        const titan = wave % 10 === 0 && !finalBoss;
+        const bossNumber = bossesDefeated + 1;
+        const baseHp = 44 + wave * 7 + (bossNumber - 1) * 35;
+
+        const attackPool = ["laser", "shockwave", "volley", "charge"];
+        const passivePool = ["orbiters", "summoner", "shield", "electricArc"];
+
+        const shuffled = [...attackPool].sort(() => Math.random() - .5);
+        const attackTypes = finalBoss
+          ? [...attackPool]
+          : titan
+            ? shuffled.slice(0, 2)
+            : [shuffled[0]];
+
+        const passiveTypes = finalBoss
+          ? [...passivePool]
+          : [passivePool[Math.floor(Math.random() * passivePool.length)]];
+
+        const maxHp = finalBoss ? baseHp * 12 : titan ? Math.round(baseHp * 1.8) : baseHp;
+        const radius = finalBoss ? 90 : titan ? 68 : Math.min(42 + bossNumber * 2, 58);
+        const maxShield = passiveTypes.includes("shield") ? Math.ceil(maxHp * (finalBoss ? .55 : .45)) : 0;
+
+        const pad = Math.min(100, W * .2, H * .2);
+        let spawnX = player.x;
+        let spawnY = player.y;
+        let farthest = -1;
+
+        for (let i = 0; i < 20; i++) {
+          const x = camera.x + rand(pad, Math.max(pad + 1, W - pad));
+          const y = camera.y + rand(pad, Math.max(pad + 1, H - pad));
+          const distance = Math.hypot(x - player.x, y - player.y);
+          if (distance > farthest) {
+            farthest = distance;
+            spawnX = x;
+            spawnY = y;
+          }
+          if (distance >= 280) break;
+        }
+
+        const boss = {
+          type: "boss",
+          finalBoss,
+          titan,
+          x: clamp(spawnX, radius, WORLD_W - radius),
+          y: clamp(spawnY, radius, WORLD_H - radius),
+          radius,
+          speed: finalBoss ? 62 : titan ? 55 : Math.min(48 + bossNumber * 5, 100),
+          hp: maxHp,
+          maxHp,
+          shield: maxShield,
+          maxShield,
+          damage: finalBoss ? 48 : titan ? 34 : Math.min(42, 20 + bossNumber * 3),
+          color: finalBoss ? "#a52cff" : titan ? "#7a315e" : "#49315f",
+          angle: 0,
+          shape: Math.floor(Math.random() * 4),
+          attackTypes,
+          attackIndex: 0,
+          currentAttackType: attackTypes[0],
+          passiveTypes,
+          attackTimer: 2.1,
+          attack: null,
+          summonTimer: 2.5,
+          hitFlash: 0,
+          arcCooldown: 0
+        };
+
+        enemies.push(boss);
+
+        if (passiveTypes.includes("orbiters")) {
+          const allowed = ["scout", "shooter"];
+          if (wave >= 5) allowed.push("brute");
+          if (wave >= 7) allowed.push("spawner");
+          if (wave >= 9) allowed.push("spammer");
+          if (wave >= 10) allowed.push("rush");
+          if (wave >= 12) allowed.push("healer");
+          if (wave >= 14) allowed.push("harness");
+
+          for (let i = 0; i < 4; i++) {
+            const angle = i * Math.PI / 2;
+            const type = allowed[Math.floor(Math.random() * allowed.length)];
+            spawnEnemyAt(
+              boss.x + Math.cos(angle) * (boss.radius + 32),
+              boss.y + Math.sin(angle) * (boss.radius + 32),
+              type
+            );
+            const orbiter = enemies[enemies.length - 1];
+            orbiter.orbitBoss = boss;
+            orbiter.orbitAngle = angle;
+            orbiter.orbitRadius = boss.radius + 32;
+            orbiter.orbitSpeed = 1.4 + Math.random() * .5;
+            orbiter.orbitDirection = i % 2 === 0 ? 1 : -1;
+          }
+        }
+      }
+
+      function shootLaser() {
+        if (player.laserTime <= 0 || player.laserCooldown > 0) return;
+
+        player.laserCooldown = 1.2;
+        player.laserFlash = .16;
+        player.laserAngle = player.angle;
+
+        const ux = Math.cos(player.laserAngle);
+        const uy = Math.sin(player.laserAngle);
+
+        for (let i = enemies.length - 1; i >= 0; i--) {
+          const enemy = enemies[i];
+          if (!isEnemyInView(enemy)) continue;
+
+          const dx = enemy.x - player.x;
+          const dy = enemy.y - player.y;
+          const along = dx * ux + dy * uy;
+          const across = Math.abs(dx * uy - dy * ux);
+
+          if (along > 0 && along <= 900 && across <= enemy.radius + 10) {
+            damageEnemy(i, 3);
+            addParticles(enemy.x, enemy.y, "#7cf7ff", 3);
+          }
+        }
+
+        trackAchievementProgress("laser", 1);
+        sound(760, .12, "sawtooth", .025);
+      }
+
+      function shoot() {
+        if (state !== "playing") return;
+
+        if (player.laserTime > 0) {
+          shootLaser();
+          return;
+        }
+
+        if (player.cooldown > 0) return;
+
+        const triple = player.tripleShot > 0;
+        const double = !triple && player.doubleShot > 0;
+        const angles = triple
+          ? [player.angle - .22, player.angle, player.angle + .22]
+          : double
+            ? [player.angle, player.angle]
+            : [player.angle];
+
+        for (let i = 0; i < angles.length; i++) {
+          const angle = angles[i];
+          const offset = double ? (i === 0 ? -6 : 6) : 0;
+          const px = -Math.sin(angle);
+          const py = Math.cos(angle);
+
+          bullets.push({
+            x: player.x + Math.cos(angle) * 23 + px * offset,
+            y: player.y + Math.sin(angle) * 23 + py * offset,
+            vx: Math.cos(angle) * 650,
+            vy: Math.sin(angle) * 650,
+            radius: 4,
+            damage: 1,
+            life: 1.2
+          });
+        }
+
+        trackAchievementProgress("shots", 1);
+        sound(650, .04, "square", .018);
+        player.cooldown = Math.max(.07, .16 - save.damage * .008);
+      }
+
+      function dash() {
+        if (state !== "playing" || player.dashCooldown > 0) return;
+
+        let dx = virtualMove.x;
+        let dy = virtualMove.y;
+
+        if (keys.has("w") || keys.has("arrowup")) dy--;
+        if (keys.has("s") || keys.has("arrowdown")) dy++;
+        if (keys.has("a") || keys.has("arrowleft")) dx--;
+        if (keys.has("d") || keys.has("arrowright")) dx++;
+
+        if (!dx && !dy) {
+          dx = Math.cos(player.angle);
+          dy = Math.sin(player.angle);
+        }
+
+        const length = Math.hypot(dx, dy) || 1;
+        player.dashX = dx / length;
+        player.dashY = dy / length;
+        player.dashTime = .18;
+        player.dashCooldown = 1.35;
+        player.invulnerable = Math.max(player.invulnerable, .22);
+        player.vx = player.dashX * 850;
+        player.vy = player.dashY * 850;
+        addParticles(player.x, player.y, "#62eaff", 10);
+        trackAchievementProgress("dashes", 1);
+        sound(110, .09, "sawtooth", .02);
+      }
+
+      function defeatEnemy(index) {
+        const enemy = enemies[index];
+        if (!enemy) return;
+
+        recordMissionProgress("kills");
+        trackAchievementProgress("kills", 1);
+
+        if (enemy.type === "boss") recordMissionProgress("bosses"), trackAchievementProgress("bosses", 1);
+
+        addParticles(enemy.x, enemy.y, enemy.color, enemy.type === "boss" ? 48 : 16);
+        dropCash(enemy.x, enemy.y, enemy.type === "boss" ? 25 + bossesDefeated * 5 : 2 + Math.floor(Math.random() * 4));
+        dropPowerUp(enemy.x, enemy.y, enemy.type === "boss");
+
+        if (enemy.type === "boss") {
+          bossesDefeated++;
+          score += 300 + wave * 30;
+        } else {
+          score += 10 + wave * 2;
+        }
+
+        trackAchievementProgress("score", Math.max(1, Math.floor(score / 100)));
+        enemies.splice(index, 1);
+        updateBestScore();
+      }
+
+      function damagePlayer(amount) {
+        if (state !== "playing") return;
+
+        if (player.shield > 0) {
+          player.shield = 0;
+          addParticles(player.x, player.y, "#62eaff", 22);
+          trackAchievementProgress("shield", 1);
+          sound(240, .08, "triangle", .025);
+          return;
+        }
+
+        if (player.invulnerable > 0) return;
+
+        player.health = Math.max(0, player.health - amount);
+        player.invulnerable = .65;
+        addParticles(player.x, player.y, "#ff6685", 18);
+        sound(180, .16, "sawtooth", .03);
+        updateHud();
+
+        if (player.health <= 0) {
+          state = "gameover";
+          showOverlay("Fim de jogo", "Pontuação: " + Math.floor(score) + ". O dinheiro coletado fica salvo.", "Voltar ao jogo");
+          showTab("home");
+        }
+      }
+
+      function fireBossAttack(boss, attackType = boss.currentAttackType) {
+        const aim = Math.atan2(player.y - boss.y, player.x - boss.x);
+
+        if (attackType === "laser") {
+          boss.attack = { kind: "laser", phase: "warning", angle: aim, timer: .95, hit: false };
+        } else if (attackType === "shockwave") {
+          boss.attack = { kind: "shockwave", radius: boss.radius, previousRadius: boss.radius, hit: false };
+        } else if (attackType === "charge") {
+          boss.attack = makeCharge(boss, boss.finalBoss ? 680 : 520, true);
+        } else {
+          const count = 5 + Math.min(bossesDefeated, 4);
+
+          for (let i = 0; i < count; i++) {
+            const angle = aim + (i - (count - 1) / 2) * .17;
+            const speed = 220 + bossesDefeated * 14;
+            hostileShots.push({
+              x: boss.x + Math.cos(angle) * boss.radius,
+              y: boss.y + Math.sin(angle) * boss.radius,
+              vx: Math.cos(angle) * speed,
+              vy: Math.sin(angle) * speed,
+              radius: 7,
+              damage: 16 + bossesDefeated * 2,
+              life: 3.2
+            });
+          }
+
+          boss.attack = { kind: "volleyFlash", timer: .35 };
+        }
+      }
+
+      function updateBoss(boss, dt) {
+        boss.angle = Math.atan2(player.y - boss.y, player.x - boss.x);
+        boss.hitFlash = Math.max(0, boss.hitFlash - dt);
+        boss.arcCooldown = Math.max(0, boss.arcCooldown - dt);
+
+        if (boss.passiveTypes.includes("summoner")) {
+          boss.summonTimer -= dt;
+          if (boss.summonTimer <= 0 && enemies.length < 15) {
+            const count = Math.min(2 + bossesDefeated, 5);
+            for (let i = 0; i < count; i++) {
+              const angle = rand(0, Math.PI * 2);
+              spawnEnemyAt(
+                boss.x + Math.cos(angle) * (boss.radius + 22),
+                boss.y + Math.sin(angle) * (boss.radius + 22),
+                Math.random() < .5 ? "scout" : "shooter"
+              );
+            }
+            boss.summonTimer = Math.max(1.5, 3.4 - bossesDefeated * .25);
+          }
+        }
+
+        if (boss.passiveTypes.includes("electricArc")) {
+          const safeRadius = boss.radius + 82;
+          const dx = player.x - boss.x;
+          const dy = player.y - boss.y;
+          const distance = Math.hypot(dx, dy) || 1;
+
+          if (distance < safeRadius) {
+            player.x = clamp(boss.x + dx / distance * safeRadius, player.radius, WORLD_W - player.radius);
+            player.y = clamp(boss.y + dy / distance * safeRadius, player.radius, WORLD_H - player.radius);
+
+            if (boss.arcCooldown <= 0) {
+              damagePlayer(8);
+              boss.arcCooldown = .7;
+            }
+            updateCamera();
+          }
+        }
+
+        if (!boss.attack) {
+          boss.attackTimer -= dt;
+          if (boss.attackTimer <= 0) {
+            boss.currentAttackType = boss.attackTypes[boss.attackIndex];
+            fireBossAttack(boss, boss.currentAttackType);
+            boss.attackIndex = (boss.attackIndex + 1) % boss.attackTypes.length;
+            boss.attackTimer = Math.max(1.6, 3.1 - bossesDefeated * .12);
+          }
+        } else {
+          const attack = boss.attack;
+
+          if (attack.kind === "laser") {
+            attack.timer -= dt;
+            if (attack.phase === "warning" && attack.timer <= 0) {
+              attack.phase = "fire";
+              attack.timer = .42;
+            } else if (attack.phase === "fire") {
+              const ux = Math.cos(attack.angle);
+              const uy = Math.sin(attack.angle);
+              const px = player.x - boss.x;
+              const py = player.y - boss.y;
+              const along = px * ux + py * uy;
+              const across = Math.abs(px * uy - py * ux);
+
+              if (!attack.hit && along > 0 && along < Math.max(W, H) * 1.5 && across < player.radius + 12) {
+                damagePlayer(22 + bossesDefeated * 2);
+                attack.hit = true;
+              }
+              if (attack.timer <= 0) boss.attack = null;
+            }
+          } else if (attack.kind === "shockwave") {
+            attack.previousRadius = attack.radius;
+            attack.radius += (240 + bossesDefeated * 16) * dt;
+
+            const distance = Math.hypot(player.x - boss.x, player.y - boss.y);
+            if (!attack.hit && distance + player.radius >= attack.previousRadius && distance - player.radius <= attack.radius) {
+              damagePlayer(18 + bossesDefeated * 2);
+              attack.hit = true;
+            }
+            if (attack.radius > Math.max(WORLD_W, WORLD_H)) boss.attack = null;
+          } else if (attack.kind === "charge") {
+            if (updateCharge(boss, attack, dt)) boss.attack = null;
+          } else if (attack.kind === "volleyFlash") {
+            attack.timer -= dt;
+            if (attack.timer <= 0) boss.attack = null;
+          }
+        }
+
+        const charging = boss.attack && boss.attack.kind === "charge";
+        if (!charging) {
+          const dx = player.x - boss.x;
+          const dy = player.y - boss.y;
+          const distance = Math.hypot(dx, dy) || 1;
+          boss.x += dx / distance * boss.speed * dt * .45;
+          boss.y += dy / distance * boss.speed * dt * .45;
+          boss.x += Math.sin(time * 1.7) * 18 * dt;
+        }
+
+        boss.x = clamp(boss.x, boss.radius, WORLD_W - boss.radius);
+        boss.y = clamp(boss.y, boss.radius, WORLD_H - boss.radius);
+
+        if (Math.hypot(player.x - boss.x, player.y - boss.y) < player.radius + boss.radius * .65) {
+          damagePlayer(boss.damage);
+        }
+      }
+
+      function finishWave() {
+        score += wave % 5 === 0 ? 150 + wave * 20 : 50 + wave * 10;
+        recordMissionProgress("waves");
+        trackAchievementProgress("waves", 1);
+        trackAchievementProgress("score", Math.max(1, Math.floor(score / 100)));
+        intermission = .6;
+        enemiesToSpawn = -1;
+        updateHud();
+      }
+
+      function updatePlayerCompanion(dt) {
+        const companion = player.companion;
+        if (!companion) return;
+
+        const followX = player.x - Math.cos(player.angle) * 36 + Math.sin(player.angle) * 25;
+        const followY = player.y - Math.sin(player.angle) * 36 - Math.cos(player.angle) * 25;
+        const blend = Math.min(1, dt * 7);
+
+        companion.x += (followX - companion.x) * blend;
+        companion.y += (followY - companion.y) * blend;
+        companion.cooldown = Math.max(0, companion.cooldown - dt);
+
+        if (companion.health <= 0) {
+          addParticles(companion.x, companion.y, "#62eaff", 18);
+          player.companion = null;
+          return;
+        }
+
+        if (companion.cooldown > 0) return;
+
+        let target = null;
+        let nearest = Infinity;
+
+        for (const enemy of enemies) {
+          if (!isEnemyInView(enemy)) continue;
+          const distance = Math.hypot(enemy.x - companion.x, enemy.y - companion.y);
+          if (distance < nearest) {
+            target = enemy;
+            nearest = distance;
+          }
+        }
+
+        if (target) {
+          companion.angle = Math.atan2(target.y - companion.y, target.x - companion.x);
+          bullets.push({
+            x: companion.x,
+            y: companion.y,
+            vx: Math.cos(companion.angle) * 580,
+            vy: Math.sin(companion.angle) * 580,
+            radius: 3,
+            damage: 1,
+            life: 1.2
+          });
+          companion.cooldown = .38;
+        }
+      }
+
+      function update(dt) {
+        time += dt;
+
+        for (const star of stars) {
+          star.y += star.speed * dt;
+          if (star.y > WORLD_H) {
+            star.y = 0;
+            star.x = Math.random() * WORLD_W;
+          }
+        }
+
+        for (let i = particles.length - 1; i >= 0; i--) {
+          const p = particles[i];
+          p.x += p.vx * dt;
+          p.y += p.vy * dt;
+          p.life -= dt;
+          if (p.life <= 0) particles.splice(i, 1);
+        }
+
+        if (state !== "playing") return;
+
+        player.shield = Math.max(0, player.shield - dt);
+        player.doubleShot = Math.max(0, player.doubleShot - dt);
+        player.tripleShot = Math.max(0, player.tripleShot - dt);
+        player.laserTime = Math.max(0, player.laserTime - dt);
+        player.laserCooldown = Math.max(0, player.laserCooldown - dt);
+        player.laserFlash = Math.max(0, player.laserFlash - dt);
+        player.speedBoost = Math.max(0, player.speedBoost - dt);
+        player.cooldown = Math.max(0, player.cooldown - dt);
+        player.invulnerable = Math.max(0, player.invulnerable - dt);
+        player.dashCooldown = Math.max(0, player.dashCooldown - dt);
+        player.dashTime = Math.max(0, player.dashTime - dt);
+        waveBanner = Math.max(0, waveBanner - dt);
+
+        if (intermission > 0) {
+          intermission -= dt;
+          if (intermission <= 0) beginWave(wave + 1);
+          updateHud();
+          return;
+        }
+
+        let mx = virtualMove.x;
+        let my = virtualMove.y;
+
+        if (keys.has("w") || keys.has("arrowup")) my--;
+        if (keys.has("s") || keys.has("arrowdown")) my++;
+        if (keys.has("a") || keys.has("arrowleft")) mx--;
+        if (keys.has("d") || keys.has("arrowright")) mx++;
+
+        player.moving = mx !== 0 || my !== 0;
+        const length = Math.hypot(mx, my) || 1;
+        const baseSpeed = Math.min(380, 280 + save.speed * 10);
+        const speed = baseSpeed * (player.speedBoost > 0 ? 1.65 : 1);
+
+        if (player.dashTime > 0) {
+          player.vx = player.dashX * 850;
+          player.vy = player.dashY * 850;
+        } else if (player.moving) {
+          player.vx += mx / length * speed * 7 * dt;
+          player.vy += my / length * speed * 7 * dt;
+        } else {
+          const friction = Math.exp(-6.5 * dt);
+          player.vx *= friction;
+          player.vy *= friction;
+        }
+
+        const velocity = Math.hypot(player.vx, player.vy);
+        if (player.dashTime <= 0 && velocity > speed) {
+          player.vx = player.vx / velocity * speed;
+          player.vy = player.vy / velocity * speed;
+        }
+
+        player.x = clamp(player.x + player.vx * dt, player.radius, WORLD_W - player.radius);
+        player.y = clamp(player.y + player.vy * dt, player.radius, WORLD_H - player.radius);
+        updateCamera();
+
+        if (mobileFire) aimAtNearestEnemy();
+        else player.angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
+
+        if (mouse.down || spaceDown || mobileFire) {
+          shoot();
+        }
+
+        updatePlayerCompanion(dt);
+
+        for (let i = powerUps.length - 1; i >= 0; i--) {
+          const item = powerUps[i];
+          item.spin += dt * 3;
+          item.life -= dt;
+
+          if (item.life <= 0) {
+            powerUps.splice(i, 1);
+            continue;
+          }
+
+          if (Math.hypot(player.x - item.x, player.y - item.y) >= player.radius + 14) continue;
+
+          if (!save.foundPowerUps.includes(item.type)) {
+            save.foundPowerUps.push(item.type);
+            persist();
+            renderPowerCatalog();
+          }
+
+          trackAchievementProgress("powerups", 1);
+
+          if (item.type === "shield") player.shield = 9;
+          else if (item.type === "double") player.doubleShot = 8;
+          else if (item.type === "triple") player.tripleShot = 8;
+          else if (item.type === "laser") {
+            player.laserTime = 8;
+            player.laserCooldown = 0;
+          } else if (item.type === "speed") player.speedBoost = 7;
+          else if (item.type === "companion") {
+            const maxHealth = Math.ceil(player.maxHealth * .5);
+            player.companion = { x: player.x, y: player.y, angle: player.angle, health: maxHealth, maxHealth, cooldown: .2 };
+          } else {
+            player.health = Math.min(player.maxHealth, player.health + Math.ceil(player.maxHealth * .2));
+            addParticles(item.x, item.y, "#73ffc2", 16);
+            trackAchievementProgress("heals", 1);
+          }
+
+          sound(520, .1, "triangle", .025);
+          powerUps.splice(i, 1);
+          updateHud();
+        }
+
+        for (let i = cashDrops.length - 1; i >= 0; i--) {
+          const drop = cashDrops[i];
+          drop.life -= dt;
+          drop.spin += dt * 4;
+          drop.x += drop.vx * dt;
+          drop.y += drop.vy * dt;
+          drop.vx *= Math.exp(-2 * dt);
+          drop.vy *= Math.exp(-2 * dt);
+
+          if (Math.hypot(player.x - drop.x, player.y - drop.y) < player.radius + 15) {
+            recordMissionProgress("cash", drop.amount);
+            trackAchievementProgress("cash", drop.amount);
+            trackAchievementProgress("money", drop.amount);
+            save.money += drop.amount;
+            persist();
+            cashDrops.splice(i, 1);
+            updateShop();
+          } else if (drop.life <= 0) {
+            cashDrops.splice(i, 1);
+          }
+        }
+
+        if (enemiesToSpawn > 0) {
+          spawnTimer -= dt;
+          const activeLimit = Math.min(5 + Math.floor(wave / 2), 11);
+          const normalCount = enemies.filter(enemy => enemy.type !== "boss").length;
+
+          if (spawnTimer <= 0 && normalCount < activeLimit) {
+            spawnEnemy();
+            enemiesToSpawn--;
+            spawnTimer = Math.max(.28, .9 - wave * .025);
+          }
+        }
+
+        const bossWave = wave % 5 === 0;
+        const waveCleared = bossWave
+          ? bossSpawned && enemiesToSpawn === 0 && enemies.length === 0
+          : enemiesToSpawn === 0 && enemies.length === 0;
+
+        if (waveCleared && enemiesToSpawn !== -1) finishWave();
+
+        for (let i = bullets.length - 1; i >= 0; i--) {
+          const bullet = bullets[i];
+          bullet.x += bullet.vx * dt;
+          bullet.y += bullet.vy * dt;
+          bullet.life -= dt;
+
+          if (bullet.life <= 0 || bullet.x < -20 || bullet.x > WORLD_W + 20 || bullet.y < -20 || bullet.y > WORLD_H + 20) {
+            bullets.splice(i, 1);
+            continue;
+          }
+
+          let hit = -1;
+          for (let j = enemies.length - 1; j >= 0; j--) {
+            const enemy = enemies[j];
+            if (!isEnemyInView(enemy)) continue;
+            if (Math.hypot(bullet.x - enemy.x, bullet.y - enemy.y) < bullet.radius + enemy.radius) {
+              hit = j;
+              break;
+            }
+          }
+
+          if (hit !== -1) {
+            damageEnemy(hit, bullet.damage);
+            trackAchievementProgress("hits", 1);
+            bullets.splice(i, 1);
+          }
+        }
+
+        for (let i = hostileShots.length - 1; i >= 0; i--) {
+          const shot = hostileShots[i];
+          shot.x += shot.vx * dt;
+          shot.y += shot.vy * dt;
+          shot.life -= dt;
+
+          if (shot.life <= 0 || shot.x < -30 || shot.x > WORLD_W + 30 || shot.y < -30 || shot.y > WORLD_H + 30) {
+            hostileShots.splice(i, 1);
+            continue;
+          }
+
+          if (player.companion && Math.hypot(player.companion.x - shot.x, player.companion.y - shot.y) < 14 + shot.radius) {
+            player.companion.health = Math.max(0, player.companion.health - shot.damage);
+            hostileShots.splice(i, 1);
+            continue;
+          }
+
+          if (Math.hypot(player.x - shot.x, player.y - shot.y) < player.radius + shot.radius) {
+            damagePlayer(shot.damage);
+            hostileShots.splice(i, 1);
+          }
+        }
+
+        for (let i = enemies.length - 1; i >= 0; i--) {
+          const enemy = enemies[i];
+
+          if (enemy.type === "boss") {
+            updateBoss(enemy, dt);
+            continue;
+          }
+
+          if (enemy.orbitBoss && enemies.includes(enemy.orbitBoss)) {
+            const boss = enemy.orbitBoss;
+            enemy.orbitAngle += enemy.orbitSpeed * enemy.orbitDirection * dt;
+            enemy.x = boss.x + Math.cos(enemy.orbitAngle) * enemy.orbitRadius;
+            enemy.y = boss.y + Math.sin(enemy.orbitAngle) * enemy.orbitRadius;
+            enemy.angle = enemy.orbitAngle + Math.PI / 2;
+
+            if (Math.hypot(player.x - enemy.x, player.y - enemy.y) < player.radius + enemy.radius) {
+              enemies.splice(i, 1);
+              damagePlayer(enemy.damage);
+            }
+            continue;
+          }
+
+          if (enemy.type === "healer" || enemy.type === "harness") {
+            enemy.supportTimer -= dt;
+
+            if (enemy.supportTimer <= 0) {
+              enemy.supportTimer = enemy.type === "healer" ? .75 : 1;
+
+              for (const ally of enemies) {
+                if (ally === enemy || ally.type === "boss") continue;
+                if (Math.hypot(ally.x - enemy.x, ally.y - enemy.y) > 185) continue;
+
+                if (enemy.type === "healer") {
+                  ally.hp = Math.min(ally.maxHp, ally.hp + 2);
+                } else {
+                  ally.maxShield = Math.max(ally.maxShield || 0, Math.ceil(ally.maxHp * .45));
+                  ally.shield = Math.min(ally.maxShield, (ally.shield || 0) + 2);
+                }
+              }
+            }
+          }
+
+          if (enemy.type === "rush") {
+            if (!enemy.rushAttack) {
+              enemy.rushTimer -= dt;
+              if (enemy.rushTimer <= 0) {
+                enemy.rushAttack = makeCharge(enemy, 500 + wave * 8, false);
+              } else {
+                const dx = player.x - enemy.x;
+                const dy = player.y - enemy.y;
+                const distance = Math.hypot(dx, dy) || 1;
+                enemy.x += dx / distance * enemy.speed * dt;
+                enemy.y += dy / distance * enemy.speed * dt;
+              }
+            } else if (updateCharge(enemy, enemy.rushAttack, dt)) {
+              enemy.rushAttack = null;
+              enemy.rushTimer = rand(1.8, 3);
+            }
+            continue;
+          }
+
+          if (enemy.type === "spawner") {
+            if (enemy.anchorMoving) {
+              const dx = enemy.anchorX - enemy.x;
+              const dy = enemy.anchorY - enemy.y;
+              const distance = Math.hypot(dx, dy);
+
+              if (distance <= 150 * dt) {
+                enemy.x = enemy.anchorX;
+                enemy.y = enemy.anchorY;
+                enemy.anchorMoving = false;
+              } else if (distance > 0) {
+                enemy.x += dx / distance * 150 * dt;
+                enemy.y += dy / distance * 150 * dt;
+              }
+            }
+
+            enemy.spawnTimer -= dt;
+            if (enemy.spawnTimer <= 0 && enemies.length < 18) {
+              spawnEnemyAt(enemy.x + rand(-24, 24), enemy.y + rand(-24, 24), "scout");
+              enemy.spawnTimer = Math.max(2, 4.5 - wave * .04);
+            }
+            continue;
+          }
+
+          const dx = player.x - enemy.x;
+          const dy = player.y - enemy.y;
+          const distance = Math.hypot(dx, dy) || 1;
+          enemy.angle = Math.atan2(dy, dx);
+          enemy.wobble += dt * 4;
+
+          if (enemy.type === "shooter" || enemy.type === "spammer") {
+            const direction = distance > 270 ? 1 : -1;
+            enemy.x += dx / distance * enemy.speed * direction * dt;
+            enemy.y += dy / distance * enemy.speed * direction * dt;
+
+            enemy.attackTimer -= dt;
+            if (enemy.attackTimer <= 0) {
+              const aim = Math.atan2(player.y - enemy.y, player.x - enemy.x);
+              const angles = enemy.type === "spammer" ? [aim - .22, aim, aim + .22] : [aim];
+              const speed = enemy.type === "spammer" ? 235 + wave * 2 : 250 + wave * 3;
+
+              for (const angle of angles) {
+                hostileShots.push({
+                  x: enemy.x + Math.cos(angle) * enemy.radius,
+                  y: enemy.y + Math.sin(angle) * enemy.radius,
+                  vx: Math.cos(angle) * speed,
+                  vy: Math.sin(angle) * speed,
+                  radius: enemy.type === "spammer" ? 5 : 6,
+                  damage: enemy.damage,
+                  life: 3
+                });
+              }
+
+              enemy.attackTimer = enemy.type === "spammer" ? 1.7 : 1.5;
+            }
+          } else if (enemy.type !== "healer" && enemy.type !== "harness") {
+            enemy.x += dx / distance * enemy.speed * dt;
+            enemy.y += dy / distance * enemy.speed * dt;
+          }
+
+          if (enemy.type === "healer" || enemy.type === "harness") {
+            enemy.x += dx / distance * enemy.speed * .35 * dt;
+            enemy.y += dy / distance * enemy.speed * .35 * dt;
+          }
+
+          if (Math.hypot(player.x - enemy.x, player.y - enemy.y) < player.radius + enemy.radius) {
+            enemies.splice(i, 1);
+            damagePlayer(enemy.damage);
+          }
+        }
+
+        updateHud();
+      }
+
+      function aimAtNearestEnemy() {
+        let target = null;
+        let closest = Infinity;
+
+        for (const enemy of enemies) {
+          if (!isEnemyInView(enemy)) continue;
+          const distance = Math.hypot(enemy.x - player.x, enemy.y - player.y);
+          if (distance < closest) {
+            closest = distance;
+            target = enemy;
+          }
+        }
+
+        if (target) player.angle = Math.atan2(target.y - player.y, target.x - player.x);
+      }
+
+      function drawBackground() {
+        const gradient = ctx.createRadialGradient(W / 2, H / 2, 20, W / 2, H / 2, Math.max(W, H));
+        gradient.addColorStop(0, "#14213b");
+        gradient.addColorStop(1, "#060a15");
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, W, H);
+
+        for (const star of stars) {
+          if (star.x < camera.x - 40 || star.x > camera.x + W + 40 ||
+              star.y < camera.y - 40 || star.y > camera.y + H + 40) continue;
+
+          ctx.fillStyle = "#d8efffc9";
+          ctx.beginPath();
+          ctx.arc(star.x - camera.x, star.y - camera.y, star.size, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      function drawPlayer() {
+        const ship = SHIPS.find(item => item.id === save.selectedShip) || SHIPS[0];
+        const color = save.shipColor || ship.color;
+
+        ctx.save();
+        ctx.translate(player.x, player.y);
+        ctx.rotate(player.angle);
+
+        if (player.invulnerable > 0 && Math.floor(player.invulnerable * 16) % 2 === 0) {
+          ctx.globalAlpha = .4;
+        }
+
+        if (player.shield > 0) {
+          ctx.strokeStyle = "#62eaff";
+          ctx.lineWidth = 2.5;
+          ctx.shadowBlur = 16;
+          ctx.shadowColor = "#62eaff";
+          ctx.beginPath();
+          ctx.arc(0, 0, 27, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+        }
+
+        const flameLength = player.moving ? 20 + Math.sin(time * 27) * 5 : 12;
+        const flame = ctx.createLinearGradient(-10, 0, -10 - flameLength, 0);
+        flame.addColorStop(0, "#fff");
+        flame.addColorStop(.4, color);
+        flame.addColorStop(1, "#3575ff00");
+        ctx.fillStyle = flame;
+        ctx.beginPath();
+        ctx.moveTo(-10, -5);
+        ctx.lineTo(-10 - flameLength, 0);
+        ctx.lineTo(-10, 5);
+        ctx.fill();
+
+        ctx.fillStyle = color;
+        ctx.strokeStyle = "#e8f7ff";
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.moveTo(25, 0);
+        ctx.lineTo(5, -6);
+        ctx.lineTo(-8, -20);
+        ctx.lineTo(-6, -6);
+        ctx.lineTo(-19, -12);
+        ctx.lineTo(-12, 0);
+        ctx.lineTo(-19, 12);
+        ctx.lineTo(-6, 6);
+        ctx.lineTo(-8, 20);
+        ctx.lineTo(5, 6);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = "#dffaff";
+        ctx.beginPath();
+        ctx.ellipse(8, 0, 6, 2.8, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      function drawCompanion() {
+        const companion = player.companion;
+        if (!companion) return;
+
+        ctx.save();
+        ctx.translate(companion.x, companion.y);
+        ctx.rotate(companion.angle || player.angle);
+
+        ctx.fillStyle = "#62eaff";
+        ctx.strokeStyle = "#e8f7ff";
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(15, 0);
+        ctx.lineTo(2, -5);
+        ctx.lineTo(-8, -10);
+        ctx.lineTo(-5, -3);
+        ctx.lineTo(-12, -5);
+        ctx.lineTo(-8, 0);
+        ctx.lineTo(-12, 5);
+        ctx.lineTo(-5, 3);
+        ctx.lineTo(-8, 10);
+        ctx.lineTo(2, 5);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = "#dffaff";
+        ctx.beginPath();
+        ctx.ellipse(4, 0, 4, 2, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        const width = 30;
+        const ratio = companion.maxHealth > 0 ? clamp(companion.health / companion.maxHealth, 0, 1) : 0;
+        ctx.fillStyle = "#000c";
+        ctx.fillRect(companion.x - width / 2, companion.y - 22, width, 5);
+        ctx.fillStyle = ratio <= .25 ? "#ff405d" : "#73ffc2";
+        ctx.fillRect(companion.x - width / 2, companion.y - 22, width * ratio, 5);
+      }
+
+      function drawEnemy(enemy) {
+        const barWidth = enemy.type === "boss" ? 130 : 40;
+        const barY = enemy.y - enemy.radius - 18;
+        const hpRatio = Math.max(0, enemy.hp / enemy.maxHp);
+
+        ctx.fillStyle = "#000b";
+        ctx.fillRect(enemy.x - barWidth / 2, barY, barWidth, 5);
+        ctx.fillStyle = enemy.type === "boss" ? "#ff6d79" : enemy.color;
+        ctx.fillRect(enemy.x - barWidth / 2, barY, barWidth * hpRatio, 5);
+
+        if (enemy.maxShield > 0 && enemy.shield > 0) {
+          const shieldY = barY - 7;
+          const shieldRatio = clamp(enemy.shield / enemy.maxShield, 0, 1);
+          ctx.fillStyle = "#000b";
+          ctx.fillRect(enemy.x - barWidth / 2, shieldY, barWidth, 4);
+          ctx.fillStyle = shieldColor(enemy.shield, enemy.maxShield);
+          ctx.fillRect(enemy.x - barWidth / 2, shieldY, barWidth * shieldRatio, 4);
+        }
+
+        ctx.save();
+        ctx.translate(enemy.x, enemy.y);
+        ctx.rotate(enemy.type === "boss" ? enemy.angle : enemy.angle + Math.sin(enemy.wobble || 0) * .08);
+
+        if (enemy.type === "boss") {
+          if (enemy.attack?.kind === "shockwave") {
+            ctx.strokeStyle = "#ffd166bb";
+            ctx.lineWidth = 5;
+            ctx.beginPath();
+            ctx.arc(0, 0, enemy.attack.radius, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+
+          if (enemy.passiveTypes?.includes("shield") && enemy.shield > 0) {
+            const color = shieldColor(enemy.shield, enemy.maxShield);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 5;
+            ctx.shadowBlur = 14;
+            ctx.shadowColor = color;
+            ctx.beginPath();
+            ctx.arc(0, 0, enemy.radius + 13, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+          }
+
+          if (enemy.passiveTypes?.includes("electricArc")) {
+            ctx.strokeStyle = "#62eaff99";
+            ctx.lineWidth = 4;
+            ctx.shadowBlur = 18;
+            ctx.shadowColor = "#62eaff";
+            ctx.beginPath();
+            ctx.arc(0, 0, enemy.radius + 82, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+          }
+
+          if (enemy.attack?.kind === "charge" && enemy.attack.phase === "warning") {
+            ctx.save();
+            ctx.rotate(enemy.attack.angle - enemy.angle);
+            ctx.strokeStyle = "#ffbe5cdd";
+            ctx.setLineDash([9, 8]);
+            ctx.lineWidth = 5;
+            ctx.beginPath();
+            ctx.moveTo(enemy.radius, 0);
+            ctx.lineTo(Math.max(W, H), 0);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.restore();
+          }
+
+          ctx.shadowBlur = 20;
+          ctx.shadowColor = enemy.color;
+          ctx.fillStyle = enemy.hitFlash > 0 ? "#fff" : enemy.color;
+          ctx.strokeStyle = "#d9c6e8";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+
+          if (enemy.shape === 0) {
+            ctx.moveTo(enemy.radius, 0);
+            ctx.lineTo(0, -enemy.radius * .8);
+            ctx.lineTo(-enemy.radius, 0);
+            ctx.lineTo(0, enemy.radius * .8);
+          } else if (enemy.shape === 1) {
+            for (let i = 0; i < 6; i++) {
+              const angle = i * Math.PI / 3;
+              const x = Math.cos(angle) * enemy.radius;
+              const y = Math.sin(angle) * enemy.radius;
+              if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+            }
+          } else if (enemy.shape === 2) {
+            for (let i = 0; i < 10; i++) {
+              const angle = i * Math.PI / 5;
+              const radius = i % 2 === 0 ? enemy.radius : enemy.radius * .65;
+              const x = Math.cos(angle) * radius;
+              const y = Math.sin(angle) * radius;
+              if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+            }
+          } else {
+            ctx.ellipse(0, 0, enemy.radius, enemy.radius * .68, 0, 0, Math.PI * 2);
+          }
+
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+          ctx.fillStyle = "#fff";
+          ctx.font = "bold 10px system-ui";
+          ctx.textAlign = "center";
+          ctx.fillText(enemy.finalBoss ? "CHEFÃO FINAL" : enemy.titan ? "CHEFÃO TITÃ" : "CHEFÃO", 0, -enemy.radius - 30);
+        } else {
+          if (enemy.type === "healer" || enemy.type === "harness") {
+            ctx.strokeStyle = enemy.type === "healer" ? "#62eaff44" : "#c7a8ff44";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(0, 0, 185, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+
+          ctx.shadowBlur = 13;
+          ctx.shadowColor = enemy.color;
+          ctx.fillStyle = enemy.color;
+          ctx.strokeStyle = "#ffffffbb";
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(enemy.radius, 0);
+          ctx.lineTo(enemy.radius * .3, -enemy.radius * .8);
+          ctx.lineTo(-enemy.radius * .7, -enemy.radius * .9);
+          ctx.lineTo(-enemy.radius * .45, 0);
+          ctx.lineTo(-enemy.radius * .7, enemy.radius * .9);
+          ctx.lineTo(enemy.radius * .3, enemy.radius * .8);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+
+          ctx.fillStyle = "#fff";
+          ctx.font = "bold 8px system-ui";
+          ctx.textAlign = "center";
+          if (enemy.type === "healer") ctx.fillText("+", 0, 3);
+          if (enemy.type === "harness") ctx.fillText("S", 0, 3);
+        }
+
+        ctx.restore();
+
+        if (enemy.type === "boss" && enemy.attack?.kind === "laser") {
+          const attack = enemy.attack;
+          ctx.save();
+          ctx.translate(enemy.x, enemy.y);
+          ctx.rotate(attack.angle);
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.lineTo(Math.max(W, H) * 2, 0);
+          ctx.strokeStyle = attack.phase === "warning" ? "#ff557788" : "#fff2f5";
+          ctx.lineWidth = attack.phase === "warning" ? 4 : 16;
+          ctx.shadowBlur = attack.phase === "fire" ? 22 : 0;
+          ctx.shadowColor = "#ff315e";
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
+
+      function drawPowerUp(item) {
+        ctx.save();
+        ctx.translate(item.x, item.y);
+        ctx.rotate(item.spin);
+        ctx.shadowBlur = 15;
+
+        const colors = {
+          medkit: "#73ffc2",
+          shield: "#62eaff",
+          double: "#b7ff7c",
+          triple: "#ffe66d",
+          laser: "#7cf7ff",
+          speed: "#ffd166",
+          companion: "#c7a8ff"
+        };
+
+        ctx.fillStyle = colors[item.type] || "#fff";
+        ctx.shadowColor = colors[item.type] || "#fff";
+
+        if (item.type === "medkit") {
+          ctx.fillRect(-9, -9, 18, 18);
+          ctx.fillStyle = "#fff";
+          ctx.fillRect(-2, -6, 4, 12);
+          ctx.fillRect(-6, -2, 12, 4);
+        } else if (item.type === "laser") {
+          ctx.fillRect(-3, -11, 6, 22);
+          ctx.fillRect(-10, -3, 20, 6);
+        } else if (item.type === "speed") {
+          ctx.beginPath();
+          ctx.moveTo(2, -12);
+          ctx.lineTo(-7, 1);
+          ctx.lineTo(0, 1);
+          ctx.lineTo(-3, 12);
+          ctx.lineTo(8, -3);
+          ctx.lineTo(1, -3);
+          ctx.closePath();
+          ctx.fill();
+        } else if (item.type === "companion") {
+          ctx.beginPath();
+          ctx.moveTo(0, -11);
+          ctx.lineTo(10, 0);
+          ctx.lineTo(0,11);
+          ctx.lineTo(-10, 0);
+          ctx.closePath();
+          ctx.fill();
+        } else {
+          ctx.beginPath();
+          ctx.moveTo(0, -11);
+          ctx.lineTo(10, 0);
+          ctx.lineTo(0, 11);
+          ctx.lineTo(-10, 0);
+          ctx.closePath();
+          ctx.fill();
+        }
+
+        ctx.restore();
+      }
+
+      function drawMinimap() {
+        const sx = minimap.width / WORLD_W;
+        const sy = minimap.height / WORLD_H;
+
+        minimapCtx.clearRect(0, 0, minimap.width, minimap.height);
+        minimapCtx.fillStyle = "#07101d";
+        minimapCtx.fillRect(0, 0, minimap.width, minimap.height);
+
+        for (const enemy of enemies) {
+          minimapCtx.fillStyle = enemy.type === "boss" ? "#ff586f" : enemy.color;
+          minimapCtx.beginPath();
+          minimapCtx.arc(
+            enemy.x * sx,
+            enemy.y * sy,
+            enemy.type === "boss" ? 4 : 2,
+            0,
+            Math.PI * 2
+          );
+          minimapCtx.fill();
+        }
+
+        minimapCtx.strokeStyle = "#62eaff";
+        minimapCtx.lineWidth = 1;
+        minimapCtx.strokeRect(
+          camera.x * sx,
+          camera.y * sy,
+          W * sx,
+          H * sy
+        );
+
+        minimapCtx.fillStyle = "#fff";
+        minimapCtx.beginPath();
+        minimapCtx.arc(
+          player.x * sx,
+          player.y * sy,
+          3,
+          0,
+          Math.PI * 2
+        );
+        minimapCtx.fill();
+      }
+
+      function draw() {
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        drawBackground();
+
+        ctx.save();
+        ctx.translate(-camera.x, -camera.y);
+
+        for (const particle of particles) {
+          ctx.globalAlpha = Math.max(0, particle.life / particle.maxLife);
+          ctx.fillStyle = particle.color;
+          ctx.beginPath();
+          ctx.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+
+        for (const drop of cashDrops) {
+          ctx.save();
+          ctx.translate(drop.x, drop.y);
+          ctx.rotate(drop.spin || 0);
+          ctx.fillStyle = "#ffd166";
+          ctx.shadowBlur = 12;
+          ctx.shadowColor = "#ffd166";
+          ctx.beginPath();
+          ctx.arc(0, 0, 9, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+          ctx.fillStyle = "#503900";
+          ctx.font = "bold 10px system-ui";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText("$", 0, 0);
+          ctx.restore();
+        }
+
+        for (const item of powerUps) {
+          drawPowerUp(item);
+        }
+
+        for (const bullet of bullets) {
+          ctx.fillStyle = "#e4fcff";
+          ctx.shadowBlur = 12;
+          ctx.shadowColor = "#62eaff";
+          ctx.beginPath();
+          ctx.arc(bullet.x, bullet.y, bullet.radius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        for (const shot of hostileShots) {
+          ctx.fillStyle = "#ff5473";
+          ctx.shadowBlur = 12;
+          ctx.shadowColor = "#ff244d";
+          ctx.beginPath();
+          ctx.arc(shot.x, shot.y, shot.radius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        ctx.shadowBlur = 0;
+
+        for (const enemy of enemies) {
+          drawEnemy(enemy);
+        }
+
+        drawPlayer();
+        drawCompanion();
+
+        if (player.laserFlash > 0) {
+          ctx.save();
+          ctx.translate(player.x, player.y);
+          ctx.rotate(player.laserAngle);
+          ctx.strokeStyle = "#b8fbff";
+          ctx.lineWidth = 9;
+          ctx.shadowBlur = 22;
+          ctx.shadowColor = "#62eaff";
+          ctx.beginPath();
+          ctx.moveTo(18, 0);
+          ctx.lineTo(Math.max(W, H) * 2, 0);
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        ctx.restore();
+
+        if (waveBanner > 0 && state === "playing") {
+          ctx.save();
+          ctx.globalAlpha = Math.min(1, waveBanner);
+          ctx.textAlign = "center";
+          ctx.font = "bold 24px system-ui";
+          ctx.fillStyle = "#eefaff";
+          ctx.shadowBlur = 18;
+          ctx.shadowColor = "#62eaff";
+
+          const waveLabel = wave === 100
+            ? "ONDA 100 — BOSS FINAL"
+            : wave % 10 === 0
+              ? `ONDA ${wave} — TITÃ`
+              : wave % 5 === 0
+                ? `ONDA ${wave} — CHEFÃO`
+                : `ONDA ${wave}`;
+
+          ctx.fillText(waveLabel, W / 2, 76);
+          ctx.restore();
+        }
+
+        if (intermission > 0 && state === "playing") {
+          ctx.fillStyle = "#ffffffdd";
+          ctx.font = "bold 16px system-ui";
+          ctx.textAlign = "center";
+          ctx.fillText("Onda concluída — prepare-se!", W / 2, H / 2 - 45);
+        }
+
+        drawMinimap();
+      }
+
+      function frame(timestamp) {
+        const dt = Math.min((timestamp - lastTime) / 1000 || .016, .033);
+        lastTime = timestamp;
+        update(dt);
+        draw();
+        requestAnimationFrame(frame);
+      }
+
+      function setMousePosition(event) {
+        const rect = canvas.getBoundingClientRect();
+        mouse.x = ((event.clientX - rect.left) / rect.width) * W + camera.x;
+        mouse.y = ((event.clientY - rect.top) / rect.height) * H + camera.y;
+      }
+
+      const movePad = $("movePad");
+      const moveStick = $("moveStick");
+      const fireButton = $("fireButton");
+      const dashButton = $("dashButton");
+
+      function updateVirtualJoystick(event) {
+        const rect = movePad.getBoundingClientRect();
+        const max = rect.width * .34;
+
+        let dx = event.clientX - (rect.left + rect.width / 2);
+        let dy = event.clientY - (rect.top + rect.height / 2);
+        const distance = Math.hypot(dx, dy);
+
+        if (distance > max) {
+          dx = dx / distance * max;
+          dy = dy / distance * max;
+        }
+
+        virtualMove.x = dx / max;
+        virtualMove.y = dy / max;
+        moveStick.style.transform =
+          `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+      }
+
+      movePad.addEventListener("pointerdown", event => {
+        if (layoutEditing) return;
+
+        event.preventDefault();
+        movePointerId = event.pointerId;
+        movePad.setPointerCapture(event.pointerId);
+        updateVirtualJoystick(event);
+      });
+
+      movePad.addEventListener("pointermove", event => {
+        if (event.pointerId === movePointerId) {
+          updateVirtualJoystick(event);
+        }
+      });
+
+      function releaseJoystick(event) {
+        if (event.pointerId !== movePointerId) return;
+
+        movePointerId = null;
+        virtualMove.x = 0;
+        virtualMove.y = 0;
+        moveStick.style.transform = "translate(-50%, -50%)";
+      }
+
+      movePad.addEventListener("pointerup", releaseJoystick);
+      movePad.addEventListener("pointercancel", releaseJoystick);
+
+      fireButton.addEventListener("pointerdown", event => {
+        if (layoutEditing) return;
+
+        event.preventDefault();
+        fireButton.setPointerCapture(event.pointerId);
+        mobileFire = true;
+      });
+
+      fireButton.addEventListener("pointerup", () => {
+        mobileFire = false;
+      });
+
+      fireButton.addEventListener("pointercancel", () => {
+        mobileFire = false;
+      });
+
+      dashButton.addEventListener("pointerdown", event => {
+        if (layoutEditing) return;
+
+        event.preventDefault();
+        dashButton.setPointerCapture(event.pointerId);
+        dash();
+      });
+
+      for (const type of ["speed", "damage", "health"]) {
+        $("buy" + type[0].toUpperCase() + type.slice(1))
+          .addEventListener("click", () => buyUpgrade(type));
+      }
+
+      document.querySelectorAll(".tab-button").forEach(button => {
+        button.addEventListener("click", () => showTab(button.dataset.tab));
+      });
+
+      $("startButton").addEventListener("click", () => {
+        if (state === "paused") {
+          state = "playing";
+          $("overlay").classList.add("hidden");
+          showTab("home");
+        } else {
+          startGame();
+        }
+      });
+
+      $("backToHomeButton").addEventListener("click", () => showTab("home"));
+      $("backToHomeFromCustomButton").addEventListener("click", () => showTab("home"));
+      $("backToHomeFromMissionsButton").addEventListener("click", () => showTab("home"));
+      $("backToHomeFromCatalogButton").addEventListener("click", () => showTab("home"));
+      $("backToHomeFromAchievementsButton").addEventListener("click", () => showTab("home"));
+      $("backToHomeFromLayoutButton").addEventListener("click", () => showTab("home"));
+      $("backToHomeFromProgressButton").addEventListener("click", () => showTab("home"));
+
+      async function toggleFullscreen() {
+        try {
+          if (!document.fullscreenElement) {
+            await gameElement.requestFullscreen();
+          } else {
+            await document.exitFullscreen();
+          }
+        } catch {
+          $("saveStatus").textContent =
+            "Tela cheia não está disponível neste navegador.";
+        }
+      }
+
+      $("fullscreenButton").addEventListener("click", toggleFullscreen);
+
+      document.addEventListener("fullscreenchange", () => {
+        $("fullscreenButton").textContent =
+          document.fullscreenElement ? "⛶" : "⛶";
+        $("fullscreenButton").setAttribute(
+          "aria-label",
+          document.fullscreenElement ? "Sair da tela cheia" : "Tela cheia"
+        );
+        resizeCanvas();
+      });
+
+      $("shipColorPicker").value = save.shipColor;
+      $("shipColorPicker").addEventListener("input", event => {
+        save.shipColor = event.target.value;
+        persist();
+      });
+
+      $("saveProgressButton").addEventListener("click", () => {
+        persist();
+        saveDailyMissionState();
+
+        try {
+          localStorage.setItem("neonVanguardBest", String(bestScore));
+          $("saveStatus").textContent = "Progresso salvo com sucesso.";
+        } catch {
+          $("saveStatus").textContent =
+            "Não foi possível salvar. Verifique o armazenamento do navegador.";
+        }
+      });
+
+      $("deleteProgressButton").addEventListener("click", () => {
+        if (!confirm("Apagar todo o progresso salvo? Essa ação não pode ser desfeita.")) return;
+
+        try {
+          localStorage.removeItem("neonVanguardSave");
+          localStorage.removeItem("neonVanguardBest");
+          localStorage.removeItem("neonVanguardDailyMissions");
+        } catch {}
+
+        save.money = 0;
+        save.speed = 0;
+        save.damage = 0;
+        save.health = 0;
+        save.ownedShips = ["classic"];
+        save.selectedShip = "classic";
+        save.shipColor = "#62eaff";
+        save.foundPowerUps = [];
+        save.achievements = { unlocked: [], progress: {} };
+
+        bestScore = 0;
+        dailyMissionState = { day: getMissionDay(), progress: {}, claimed: [] };
+        saveDailyMissionState();
+
+        $("shipColorPicker").value = save.shipColor;
+        $("saveStatus").textContent = "Progresso apagado.";
+
+        updateShop();
+        updateHud();
+        renderAchievements();
+      });
+
+      document.addEventListener("keydown", event => {
+        const key = event.key.toLowerCase();
+
+        if (["arrowup", "arrowdown", "arrowleft", "arrowright", " "].includes(key)) {
+          event.preventDefault();
+        }
+
+        keys.add(key);
+
+        if (key === " ") spaceDown = true;
+        if (key === "shift" && !event.repeat) dash();
+
+        if (key === "l" && state !== "playing") {
+          showTab("shop");
+        }
+
+        if (key === "escape" && state === "playing" && !layoutEditing) {
+          state = "paused";
+          showOverlay(
+            "Pausado",
+            "A partida está pausada. Você pode voltar quando quiser.",
+            "Continuar"
+          );
+          showTab("home");
+        }
+      });
+
+      document.addEventListener("keyup", event => {
+        const key = event.key.toLowerCase();
+        keys.delete(key);
+        if (key === " ") spaceDown = false;
+      });
+
+      $("dailyMissionList").addEventListener("click", event => {
+        const button = event.target.closest("[data-claim-mission]");
+        if (!button) return;
+
+        refreshDailyMissionDay();
+        const mission = getTodaysMissionDefinitions()
+          .find(item => item.id === button.dataset.claimMission);
+
+        if (!mission || dailyMissionState.claimed.includes(mission.id)) return;
+        if ((dailyMissionState.progress[mission.id] || 0) < mission.goal) return;
+
+        dailyMissionState.claimed.push(mission.id);
+        save.money += mission.reward;
+        persist();
+        saveDailyMissionState();
+        updateShop();
+      });
+
+      function readLayout() {
+        try {
+          return JSON.parse(localStorage.getItem("neonVanguardLayout") || "{}");
+        } catch {
+          return {};
+        }
+      }
+
+      function saveLayout() {
+        const layout = {};
+        const gameRect = gameElement.getBoundingClientRect();
+
+        document.querySelectorAll("[data-layout-item]").forEach(element => {
+          const rect = element.getBoundingClientRect();
+
+          layout[element.dataset.layoutItem] = {
+            x: (rect.left - gameRect.left) / gameRect.width,
+            y: (rect.top - gameRect.top) / gameRect.height,
+            width: element.offsetWidth,
+            height: element.offsetHeight
+          };
+        });
+
+        try {
+          localStorage.setItem("neonVanguardLayout", JSON.stringify(layout));
+        } catch {}
+      }
+
+      function applyLayout() {
+        const layout = readLayout();
+        const gameRect = gameElement.getBoundingClientRect();
+
+        document.querySelectorAll("[data-layout-item]").forEach(element => {
+          const saved = layout[element.dataset.layoutItem];
+          if (!saved) return;
+
+          const width = Number.isFinite(saved.width) ? saved.width : element.offsetWidth;
+          const height = Number.isFinite(saved.height) ? saved.height : element.offsetHeight;
+          const maxLeft = Math.max(0, gameRect.width - width);
+          const maxTop = Math.max(46, gameRect.height - height);
+
+          let left = clamp(saved.x * gameRect.width, 0, maxLeft);
+          let top = clamp(saved.y * gameRect.height, 46, maxTop);
+
+          if (element.id === "minimap") {
+            top = clamp(top, 52, Math.max(52, gameRect.height - height - 90));
+          }
+
+          element.style.left = `${left}px`;
+          element.style.top = `${top}px`;
+          element.style.right = "auto";
+          element.style.bottom = "auto";
+
+          if (element.id === "fireButton" || element.id === "dashButton") {
+            element.style.width = `${clamp(width, 44, 120)}px`;
+            element.style.height = `${clamp(height, 44, 120)}px`;
+          }
+        });
+      }
+
+      function selectLayoutItem(element) {
+        document.querySelectorAll("[data-layout-item]").forEach(item => {
+          item.classList.toggle("layout-selected", item === element);
+        });
+
+        selectedLayoutItem = element;
+
+        const labels = {
+          minimap: "Minimapa",
+          movePad: "Joystick",
+          fireButton: "Atirar",
+          dashButton: "Dash"
+        };
+
+        $("selectedLayoutLabel").textContent =
+          labels[element.dataset.layoutItem] || "Controle";
+      }
+
+      function dragLayoutItem(event, element) {
+        if (!layoutEditing) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+        selectLayoutItem(element);
+
+        const gameRect = gameElement.getBoundingClientRect();
+        const initialRect = element.getBoundingClientRect();
+        const startX = event.clientX;
+        const startY = event.clientY;
+        const startLeft = initialRect.left - gameRect.left;
+        const startTop = initialRect.top - gameRect.top;
+
+        function onMove(moveEvent) {
+          const dx = moveEvent.clientX - startX;
+          const dy = moveEvent.clientY - startY;
+          const width = element.offsetWidth;
+          const height = element.offsetHeight;
+
+          const left = clamp(startLeft + dx, 0, gameRect.width - width);
+          let top = clamp(startTop + dy, 46, gameRect.height - height);
+
+          if (element.id === "minimap") {
+            top = clamp(top, 52, Math.max(52, gameRect.height - height - 90));
+          }
+
+          element.style.left = `${left}px`;
+          element.style.top = `${top}px`;
+          element.style.right = "auto";
+          element.style.bottom = "auto";
+        }
+
+        function onEnd() {
+          document.removeEventListener("pointermove", onMove);
+          document.removeEventListener("pointerup", onEnd);
+          saveLayout();
+        }
+
+        document.addEventListener("pointermove", onMove);
+        document.addEventListener("pointerup", onEnd, { once: true });
+      }
+
+      document.querySelectorAll("[data-layout-item]").forEach(element => {
+        element.addEventListener("pointerdown", event => {
+          dragLayoutItem(event, element);
+        });
+      });
+
+      function resizeSelectedControl(multiplier) {
+        if (!selectedLayoutItem) {
+          $("layoutStatus").textContent = "Selecione primeiro um controle.";
+          return;
+        }
+
+        if (!["fireButton", "dashButton"].includes(selectedLayoutItem.id)) {
+          $("layoutStatus").textContent =
+            "O tamanho pode ser alterado nos botões Atirar e Dash.";
+          return;
+        }
+
+        const currentWidth = selectedLayoutItem.offsetWidth;
+        const currentHeight = selectedLayoutItem.offsetHeight;
+        const newWidth = clamp(Math.round(currentWidth * multiplier), 44, 120);
+        const newHeight = clamp(Math.round(currentHeight * multiplier), 44, 120);
+
+        selectedLayoutItem.style.width = `${newWidth}px`;
+        selectedLayoutItem.style.height = `${newHeight}px`;
+
+        saveLayout();
+        $("layoutStatus").textContent =
+          `Tamanho atualizado: ${newWidth} × ${newHeight}px.`;
+      }
+
+      $("shrinkLayoutItem").addEventListener("click", () => {
+        resizeSelectedControl(.9);
+      });
+
+      $("growLayoutItem").addEventListener("click", () => {
+        resizeSelectedControl(1.1);
+      });
+
+      $("toggleLayoutEdit").addEventListener("click", () => {
+        layoutEditing = true;
+        gameElement.classList.add("layout-editing");
+        $("overlay").classList.add("hidden");
+        $("layoutStatus").textContent =
+          "Arraste os controles individualmente. Selecione Atirar ou Dash e use −/+ para mudar o tamanho.";
+        applyLayout();
+      });
+
+      $("finishLayout").addEventListener("click", () => {
+        layoutEditing = false;
+        gameElement.classList.remove("layout-editing");
+
+        document.querySelectorAll("[data-layout-item]").forEach(element => {
+          element.classList.remove("layout-selected");
+        });
+
+        selectedLayoutItem = null;
+        $("overlay").classList.remove("hidden");
+        $("layoutStatus").textContent = "Posições e tamanhos salvos.";
+        saveLayout();
+      });
+
+      $("resetLayout").addEventListener("click", () => {
+        try {
+          localStorage.removeItem("neonVanguardLayout");
+        } catch {}
+
+        document.querySelectorAll("[data-layout-item]").forEach(element => {
+          element.style.left = "";
+          element.style.top = "";
+          element.style.right = "";
+          element.style.bottom = "";
+          element.style.width = "";
+          element.style.height = "";
+          element.classList.remove("layout-selected");
+        });
+
+        selectedLayoutItem = null;
+        $("selectedLayoutLabel").textContent = "Selecione um controle";
+        $("layoutStatus").textContent = "Posições e tamanhos restaurados.";
+      });
+
+      canvas.addEventListener("pointermove", setMousePosition);
+
+      canvas.addEventListener("pointerdown", event => {
+        setMousePosition(event);
+        mouse.down = true;
+        if (canvas.setPointerCapture) canvas.setPointerCapture(event.pointerId);
+      });
+
+      window.addEventListener("pointerup", () => {
+        mouse.down = false;
+        mobileFire = false;
+      });
+
+      window.addEventListener("blur", () => {
+        keys.clear();
+        spaceDown = false;
+        mouse.down = false;
+        mobileFire = false;
+        virtualMove.x = 0;
+        virtualMove.y = 0;
+        movePointerId = null;
+        moveStick.style.transform = "translate(-50%, -50%)";
+      });
+
+      window.addEventListener("resize", resizeCanvas);
+
+      showTab("home");
+      updateShop();
+      updateHud();
+      renderAchievements();
+      resizeCanvas();
+      requestAnimationFrame(frame);
+    })();
+  </script>
+</body>
+</html>
